@@ -1,51 +1,53 @@
 // T5: each page fits the viewport width
-// Verifica que cada canvas tenga width === viewportWidth tras renderPDF.
+// Verifica que canvas.width === viewportWidth independientemente del ancho original del PDF.
+// Se prueba con dos anchos de página distintos para que el test no dependa de un valor fijo.
 
 const assert = require('assert');
 
-const VIEWPORT_WIDTH = 1280;
+function makePageMock(pageWidthPts) {
+  return {
+    getViewport: ({ scale }) => ({ width: pageWidthPts * scale, height: pageWidthPts * 1.41 * scale }),
+    render: () => ({ promise: Promise.resolve() }),
+  };
+}
 
-const mockPage = {
-  getViewport: ({ scale }) => ({ width: 800 * scale, height: 1100 * scale }),
-  render: () => ({ promise: Promise.resolve() }),
-};
-const mockPdf = {
-  numPages: 2,
-  getPage: () => Promise.resolve(mockPage),
-};
-global.pdfjsLib = {
-  getDocument: () => ({ promise: Promise.resolve(mockPdf) }),
-};
-global.document = {
-  createElement: (tag) => ({
-    tag,
-    width: 0,
-    height: 0,
-    getContext: () => ({}),
-  }),
-};
+function makeSetup(pageWidthPts) {
+  global.document = {
+    createElement: () => ({ width: 0, height: 0, getContext: () => ({}) }),
+  };
+  global.pdfjsLib = {
+    getDocument: () => ({
+      promise: Promise.resolve({
+        numPages: 1,
+        getPage: () => Promise.resolve(makePageMock(pageWidthPts)),
+      }),
+    }),
+  };
+  delete require.cache[require.resolve('../app.js')];
+  return require('../app.js').renderPDF;
+}
 
-// Limpiar caché para obtener módulo fresco con los globals actuales
-delete require.cache[require.resolve('../app.js')];
-const { renderPDF } = require('../app.js');
+async function checkViewportWidth(pageWidthPts, viewportWidth) {
+  const renderPDF = makeSetup(pageWidthPts);
+  const appended = [];
+  await renderPDF(new ArrayBuffer(8), { appendChild: (el) => appended.push(el) }, viewportWidth);
+
+  const canvas = appended[0];
+  assert.strictEqual(
+    canvas.width,
+    viewportWidth,
+    `PDF de ${pageWidthPts}pt renderizado a ${canvas.width}px, debería ser ${viewportWidth}px`
+  );
+}
 
 async function run() {
-  const appended = [];
-  const container = { appendChild: (el) => appended.push(el) };
+  // Caso 1: página A4 (595pt) → viewport 1280px
+  await checkViewportWidth(595, 1280);
 
-  await renderPDF(new ArrayBuffer(8), container, VIEWPORT_WIDTH);
+  // Caso 2: página carta americana (612pt) → viewport 768px (tablet)
+  await checkViewportWidth(612, 768);
 
-  assert.ok(appended.length > 0, 'Debe haber al menos un canvas');
-  appended.forEach((canvas, i) => {
-    assert.strictEqual(
-      canvas.width,
-      VIEWPORT_WIDTH,
-      `La página ${i + 1} debe tener width === ${VIEWPORT_WIDTH}, tiene ${canvas.width}`
-    );
-  });
-
-  console.log(`✅ T5 passed: todas las páginas tienen width === ${VIEWPORT_WIDTH}px (viewport width)`);
+  console.log('✅ T5 passed: canvas.width === viewportWidth para distintos anchos de página y viewport');
 }
 
 run().catch((err) => { console.error(err.message); process.exit(1); });
-
