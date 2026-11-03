@@ -34,7 +34,8 @@ header {
   letter-spacing: 0.03em;
 }
 
-#open-btn {
+#open-btn,
+#autoscroll-btn {
   padding: 0.4rem 1rem;
   background: #4a90d9;
   color: #fff;
@@ -42,10 +43,23 @@ header {
   border-radius: 4px;
   cursor: pointer;
   font-size: 0.9rem;
+  transition: background 0.15s ease;
 }
 
-#open-btn:hover {
+#open-btn:hover,
+#autoscroll-btn:hover {
   background: #357abd;
+}
+
+.speed-label {
+  font-size: 0.85rem;
+  color: #bbb;
+  margin-left: 0.25rem;
+}
+
+#speed-input {
+  cursor: pointer;
+  accent-color: #4a90d9;
 }
 
 /* ── Área principal ──────────────────────────────── */

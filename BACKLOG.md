@@ -8,8 +8,8 @@ Expensive decisions: none
 ## Backlog
 1. [x] As a musician, I want to open a PDF file and see all its pages stacked vertically, so that I can read my sheet music on screen.
 2. [x] As a musician, I want to open image files (JPG, PNG, WEBP) as sheet music, so that I can view scores that come as photos or scans. Requires: #1
-3. [ ] As a musician, I want to select multiple images at once and group them as a single multi-page score, so that I can read scores split across several image files. Requires: #2
-4. [ ] As a musician, I want to activate continuous auto-scroll at an adjustable speed and pause or resume it, so that the score advances on its own while I play. Requires: #1
+3. [x] As a musician, I want to select multiple images at once and group them as a single multi-page score, so that I can read scores split across several image files. Requires: #2
+4. [x] As a musician, I want to activate continuous auto-scroll at an adjustable speed and pause or resume it, so that the score advances on its own while I play. Requires: #1
 5. [ ] As a musician, I want a metronome with adjustable BPM and time signature (2/4, 3/4, 4/4, 6/8), so that I can keep a steady tempo with the right accent pattern while practicing.
 6. [ ] As a musician, I want to tap a button rhythmically to set the BPM, so that I can match the tempo I have in mind without guessing a number. Requires: #5
 7. [ ] As a musician, I want my uploaded scores saved in a persistent library, so that I don't have to re-upload them every session. Requires: #1
