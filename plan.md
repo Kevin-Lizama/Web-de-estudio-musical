@@ -1,27 +1,25 @@
-# Story #1 — Abrir PDF y visualizar páginas
+# Story #2 — Abrir imágenes como partitura
 
 ## Story
-As a musician, I want to open a PDF file and see all its pages stacked vertically, so that I can read my sheet music on screen.
+As a musician, I want to open image files (JPG, PNG, WEBP) as sheet music, so that I can view scores that come as photos or scans.
 
 ## Acceptance criteria
-- [ ] Given I'm on the app, when I click an "Open" button and select a PDF file from my computer, then all pages of the PDF are rendered vertically one below another in the main area.
-- [ ] Given a multi-page PDF is loaded, when I scroll down, then I can see all pages in order without gaps or overlaps, each fitting the width of the viewport.
-- [ ] Given no PDF is loaded, when I open the app, then I see an empty state inviting me to open a file (not a blank screen).
+- [x] Given I'm on the app, when I click the open button and select a JPG, PNG, or WEBP file, then the image is displayed in the main viewer area, fitting the full width of the viewport.
+- [x] Given an image is loaded, when I look at the open button, then it still reads the same as before (the button label doesn't change between PDF and image mode).
+- [x] Given no file is loaded, when I open the app, then the empty state is still visible as in story #1.
 
 ## Plan
-1. Create the HTML shell with a header (app name + open button), a main content area for the pages, and a minimal empty state.
-2. Wire the open button to a file input that accepts `.pdf`, read the selected file as an `ArrayBuffer`.
-3. Load PDF.js from a local copy, pass the buffer to it, and iterate all pages rendering each one to a `<canvas>` at the viewport width.
-4. Append all canvases vertically into the main content area so native browser scroll works.
-5. Style the layout with basic CSS (centered pages, subtle gap between them, dark or neutral background to reduce eye strain).
+1. Extend the file input's `accept` attribute to also include `image/jpeg`, `image/png`, and `image/webp`.
+2. In the `change` handler, branch on `file.type`: if it starts with `image/`, handle it as an image; otherwise keep the existing PDF flow.
+3. For the image branch: create an `<img>` element, set its `src` to a blob URL (`URL.createObjectURL(file)`), apply the same full-width CSS already used for canvases, and append it to `#viewer`.
+4. Hide the empty state and clear previous pages (canvases or images) the same way already done for PDFs.
+5. No new functions needed; the branch lives inside the existing `change` listener.
 
 ## Out of scope
-- Images (JPG/PNG) — that's story #2
+- Selecting multiple images as a single score — that's story #3
 - Auto-scroll — that's story #4
-- Saving/library/IndexedDB — that's story #7
-- Zoom controls — future enhancement
-- Double-page mode — future enhancement
+- Saving images to the library — that's story #7
+- Zoom or rotation controls — future enhancement
 
 ## Suggestions (your call)
-- **Background color:** Partituras on a dark grey background (`#2a2a2a`) reduce eye fatigue in long practice sessions, and make the white pages "pop."
-
+- **Blob URL cleanup:** call `URL.revokeObjectURL()` when a new file is opened to avoid memory leaks, especially relevant if the user opens many large scans in one session.

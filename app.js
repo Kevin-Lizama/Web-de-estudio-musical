@@ -28,6 +28,32 @@ async function renderPDF(arrayBuffer, container, viewportWidth) {
   }
 }
 
+/**
+ * Maneja la apertura de un archivo (PDF o imagen).
+ * @param {File}        file        Archivo seleccionado por el usuario
+ * @param {HTMLElement} viewer      Contenedor principal
+ * @param {HTMLElement} emptyState  Elemento de estado vacío
+ */
+function handleFileOpen(file, viewer, emptyState, viewportWidth = (typeof window !== 'undefined' ? window.innerWidth : 1024)) {
+  if (!file) return;
+
+  if (file.type && file.type.startsWith('image/')) {
+    emptyState.hidden = true;
+    viewer.querySelectorAll('canvas, img').forEach((el) => el.remove());
+    const img = document.createElement('img');
+    img.src = URL.createObjectURL(file);
+    viewer.appendChild(img);
+  } else {
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      emptyState.hidden = true;
+      viewer.querySelectorAll('canvas, img').forEach((el) => el.remove());
+      renderPDF(ev.target.result, viewer, viewportWidth);
+    };
+    reader.readAsArrayBuffer(file);
+  }
+}
+
 // Wiring del browser (no corre en Node)
 if (typeof module === 'undefined') {
   // Worker requerido por PDF.js para parsear en background
@@ -41,21 +67,12 @@ if (typeof module === 'undefined') {
 
   fileInput.addEventListener('change', (e) => {
     const file = e.target.files[0];
-    if (!file) return;
-
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      emptyState.hidden = true;
-      // Limpia páginas anteriores si se abre otro PDF
-      viewer.querySelectorAll('canvas').forEach((c) => c.remove());
-      renderPDF(ev.target.result, viewer, window.innerWidth);
-    };
-    reader.readAsArrayBuffer(file);
+    handleFileOpen(file, viewer, emptyState);
   });
 }
 
 // Export para tests en Node
 if (typeof module !== 'undefined') {
-  module.exports = { renderPDF };
+  module.exports = { renderPDF, handleFileOpen };
 }
 

@@ -58,8 +58,9 @@ header {
   overflow-y: auto;
 }
 
-/* Cada canvas (una página del PDF) */
-#viewer canvas {
+/* Cada canvas (página del PDF) o imagen */
+#viewer canvas,
+#viewer img {
   display: block;
   width: 100%;       /* ocupa todo el ancho disponible */
   max-width: 100%;

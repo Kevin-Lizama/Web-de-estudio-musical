@@ -3,9 +3,10 @@
 // y que invite al usuario a abrir un archivo.
 
 const fs = require('fs');
+const path = require('path');
 const assert = require('assert');
 
-const html = fs.readFileSync('index.html', 'utf8');
+const html = fs.readFileSync(path.resolve(__dirname, '../index.html'), 'utf8');
 
 assert.ok(
   html.includes('id="empty-state"'),
