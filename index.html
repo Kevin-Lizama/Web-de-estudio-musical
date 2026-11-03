@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="es">
+
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Estudio Musical</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+
+<body>
+  <header>
+    <span class="app-name">Estudio Musical</span>
+    <button id="open-btn">Abrir PDF</button>
+    <input id="file-input" type="file" accept=".pdf" hidden />
+  </header>
+
+  <main id="viewer">
+    <div id="empty-state">
+      <p>Abre un archivo PDF para comenzar a leer tu partitura.</p>
+    </div>
+  </main>
+
+  <script src="lib/pdf.min.js"></script>
+  <script src="app.js"></script>
+</body>
+
+</html>
