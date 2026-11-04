@@ -35,6 +35,44 @@ async function renderPDF(arrayBuffer, container, viewportWidth) {
 }
 
 /**
+ * Elimina todas las páginas (canvas o img) del visor y revoca cualquier ObjectURL activo.
+ * @param {HTMLElement} viewer
+ */
+function clearViewer(viewer) {
+  if (!viewer || typeof viewer.querySelectorAll !== 'function') return;
+  const elements = viewer.querySelectorAll('canvas, img');
+  elements.forEach((el) => {
+    if (el.src && el.src.startsWith('blob:') && typeof URL !== 'undefined' && typeof URL.revokeObjectURL === 'function') {
+      URL.revokeObjectURL(el.src);
+    }
+    if (typeof el.remove === 'function') {
+      el.remove();
+    }
+  });
+}
+
+/**
+ * Renderiza el contenido de una partitura (PDF o imágenes) en el visor.
+ * @param {Object}      score
+ * @param {HTMLElement} viewer
+ * @param {number}      viewportWidth
+ */
+async function renderScore(score, viewer, viewportWidth) {
+  if (!score || !viewer) return;
+  if (score.type === 'pdf') {
+    const buf = (score.data instanceof ArrayBuffer) ? score.data.slice(0) : score.data;
+    await renderPDF(buf, viewer, viewportWidth);
+  } else if (score.type === 'images' && Array.isArray(score.data)) {
+    for (const item of score.data) {
+      const blob = new Blob([item.buffer], { type: item.type || 'image/png' });
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(blob);
+      viewer.appendChild(img);
+    }
+  }
+}
+
+/**
  * Lee de forma segura el contenido binario (ArrayBuffer) de un archivo o Blob.
  * Utiliza la API moderna file.arrayBuffer() o FileReader como fallback.
  * @param {Blob|File} file
@@ -81,12 +119,7 @@ async function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof
 
   stopAutoScroll();
   emptyState.hidden = true;
-  viewer.querySelectorAll('canvas, img').forEach((el) => {
-    if (el.src && el.src.startsWith('blob:')) {
-      URL.revokeObjectURL(el.src);
-    }
-    el.remove();
-  });
+  clearViewer(viewer);
 
   const imageEntries = [];
 
@@ -369,6 +402,101 @@ function toggleAutoScroll(btn, speedInput, viewer) {
   }
 }
 
+// ── Biblioteca ────────────────────────────────────
+
+/**
+ * Abre el diálogo de biblioteca y lista las partituras disponibles o muestra el estado vacío.
+ * @param {HTMLDialogElement} dialog
+ * @param {HTMLElement}       listEl
+ * @param {HTMLElement}       emptyEl
+ * @param {Object}            scoreStorage
+ */
+async function openLibrary(dialog, listEl, emptyEl, scoreStorage = storage) {
+  if (dialog && !dialog.open && typeof dialog.showModal === 'function') {
+    dialog.showModal();
+  } else if (dialog && !dialog.open) {
+    dialog.open = true;
+  }
+
+  let scores = [];
+  try {
+    if (scoreStorage && typeof scoreStorage.listScores === 'function') {
+      scores = await scoreStorage.listScores();
+    }
+  } catch (err) {
+    console.warn('No se pudieron listar las partituras de la biblioteca:', err);
+    scores = [];
+  }
+
+  if (listEl) {
+    listEl.innerHTML = '';
+  }
+
+  if (!scores || scores.length === 0) {
+    if (emptyEl) emptyEl.hidden = false;
+  } else {
+    if (emptyEl) emptyEl.hidden = true;
+    if (listEl && typeof document !== 'undefined') {
+      scores.forEach((score) => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'library-item-btn';
+        btn.textContent = score.name || score.id;
+        btn.dataset.id = score.id || score.name;
+        li.appendChild(btn);
+        listEl.appendChild(li);
+      });
+    }
+  }
+}
+
+/**
+ * Abre una partitura por su ID desde el almacenamiento, la renderiza y actualiza la sesión activa.
+ * @param {string}            scoreId
+ * @param {HTMLElement}       viewer
+ * @param {HTMLElement}       emptyState
+ * @param {HTMLDialogElement} dialog
+ * @param {number}            viewportWidth
+ * @param {Object}            scoreStorage
+ * @returns {Promise<Object|null>}
+ */
+async function openScoreById(scoreId, viewer, emptyState, dialog = null, viewportWidth = (typeof window !== 'undefined' ? window.innerWidth : 1024), scoreStorage = storage) {
+  if (!scoreStorage || typeof scoreStorage.getScore !== 'function') return null;
+
+  let score = null;
+  try {
+    score = await scoreStorage.getScore(scoreId);
+  } catch (err) {
+    console.warn('No se pudo recuperar la partitura de la biblioteca:', err);
+    return null;
+  }
+
+  if (!score) return null;
+
+  stopAutoScroll();
+  clearViewer(viewer);
+  if (emptyState) emptyState.hidden = true;
+  await renderScore(score, viewer, viewportWidth);
+
+  if (typeof scoreStorage.saveScore === 'function') {
+    try {
+      await scoreStorage.saveScore({
+        ...score,
+        updatedAt: Date.now(),
+      });
+    } catch (err) {
+      console.warn('No se pudo actualizar la última partitura activa:', err);
+    }
+  }
+
+  if (dialog && typeof dialog.close === 'function') {
+    dialog.close();
+  }
+
+  return score;
+}
+
 // Wiring del browser (no corre en Node)
 if (typeof module === 'undefined') {
   // Worker requerido por PDF.js para parsear en background
@@ -402,6 +530,49 @@ if (typeof module === 'undefined') {
     });
   }
 
+  const libraryBtn = document.getElementById('library-btn');
+  const libraryDialog = document.getElementById('library-dialog');
+  const closeLibraryBtn = document.getElementById('close-library-btn');
+  const libraryList = document.getElementById('library-list');
+  const libraryEmpty = document.getElementById('library-empty');
+
+  if (libraryBtn && libraryDialog) {
+    libraryBtn.addEventListener('click', () => {
+      openLibrary(libraryDialog, libraryList, libraryEmpty, storage);
+    });
+  }
+
+  if (closeLibraryBtn && libraryDialog) {
+    closeLibraryBtn.addEventListener('click', () => {
+      libraryDialog.close();
+    });
+  }
+
+  if (libraryDialog) {
+    libraryDialog.addEventListener('click', (e) => {
+      if (e.target === libraryDialog) {
+        libraryDialog.close();
+      }
+    });
+  }
+
+  let isOpeningScore = false;
+  if (libraryList) {
+    libraryList.addEventListener('click', (e) => {
+      const btn = e.target.closest('.library-item-btn');
+      if (btn && btn.dataset.id && !isOpeningScore) {
+        isOpeningScore = true;
+        openScoreById(btn.dataset.id, viewer, emptyState, libraryDialog, window.innerWidth, storage)
+          .catch((err) => {
+            console.warn('Error al abrir la partitura seleccionada:', err);
+          })
+          .finally(() => {
+            isOpeningScore = false;
+          });
+      }
+    });
+  }
+
   // Restaurar automáticamente la última partitura activa al cargar la página
   restoreLastScore(viewer, emptyState).catch((err) => {
     console.warn('Error al restaurar última partitura activa:', err);
@@ -429,28 +600,9 @@ async function restoreLastScore(viewer, emptyState, viewportWidth = (typeof wind
 
   if (!score) return null;
 
-  if (viewer && typeof viewer.querySelectorAll === 'function') {
-    viewer.querySelectorAll('canvas, img').forEach((el) => {
-      if (el.src && el.src.startsWith('blob:')) {
-        URL.revokeObjectURL(el.src);
-      }
-      el.remove();
-    });
-  }
-
+  clearViewer(viewer);
   if (emptyState) emptyState.hidden = true;
-
-  if (score.type === 'pdf') {
-    const buf = (score.data instanceof ArrayBuffer) ? score.data.slice(0) : score.data;
-    await renderPDF(buf, viewer, viewportWidth);
-  } else if (score.type === 'images' && Array.isArray(score.data)) {
-    for (const item of score.data) {
-      const blob = new Blob([item.buffer], { type: item.type || 'image/png' });
-      const img = document.createElement('img');
-      img.src = URL.createObjectURL(blob);
-      viewer.appendChild(img);
-    }
-  }
+  await renderScore(score, viewer, viewportWidth);
 
   return score;
 }
@@ -459,8 +611,12 @@ async function restoreLastScore(viewer, emptyState, viewportWidth = (typeof wind
 if (typeof module !== 'undefined') {
   module.exports = {
     renderPDF,
+    clearViewer,
+    renderScore,
     handleFileOpen,
     restoreLastScore,
+    openLibrary,
+    openScoreById,
     toggleAutoScroll,
     stopAutoScroll,
     getAutoScrollState,

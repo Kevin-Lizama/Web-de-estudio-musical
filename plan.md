@@ -1,28 +1,27 @@
-# Story #7 — Guardar partituras en biblioteca persistente
+# Story #8 — Explorar y abrir partituras desde la biblioteca
 
 ## Story
-As a musician, I want my uploaded scores saved in a persistent library, so that I don't have to re-upload them every session.
+As a musician, I want to browse my saved library and open a score from it, so that I can quickly access any piece I've previously loaded.
 
 ## Acceptance criteria
-- [x] Given una partitura abierta (archivo PDF o conjunto de imágenes), when se carga en el visor, then se guarda automáticamente en el almacenamiento local persistente con su nombre y contenido binario.
-- [x] Given una partitura previamente guardada en el almacenamiento local, when recargo la página o inicio una nueva sesión, then la última partitura utilizada se recupera y renderiza automáticamente en el visor.
-- [x] Given una partitura que ya existe en la biblioteca, when vuelvo a abrirla, then se actualiza su marca de uso sin generar registros duplicados ni inconsistencias en el almacenamiento.
+- [x] Given una o más partituras guardadas previamente, when abro la biblioteca, then visualizo la lista con los nombres de todas las partituras disponibles.
+- [x] Given la lista de partituras de la biblioteca visible, when elijo una partitura, then se cierra la biblioteca y la partitura seleccionada se despliega en el visor reemplazando cualquier contenido previo.
+- [x] Given una biblioteca sin partituras guardadas, when abro la biblioteca, then veo un mensaje informando que no hay partituras guardadas.
 
 ## Plan
-- Inicializar una base de datos local en el navegador con un almacén para partituras y metadatos de sesión.
-- Guardar automáticamente en el almacenamiento local el contenido y metadatos de cada partitura (PDF o imágenes) al cargarse con éxito en el visor.
-- Mantener un puntero o clave de la última partitura activa para identificar qué documento restaurar.
-- Al cargar la página, consultar el almacenamiento y renderizar automáticamente la última partitura activa si existe.
-- Evitar entradas duplicadas actualizando el registro existente si se abre un archivo con la misma identidad o nombre.
+- Agregar un control en la barra superior para abrir y cerrar la vista o panel de biblioteca.
+- Presentar un modal o panel con la lista interactiva de partituras o un mensaje si está vacía.
+- Obtener todas las partituras guardadas del almacenamiento persistente al abrir la biblioteca.
+- Cargar y renderizar la partitura seleccionada en el visor principal y cerrar la biblioteca.
+- Actualizar la partitura seleccionada como la última activa en la sesión persistente.
 
 ## Out of scope
-- Interfaz gráfica para explorar o navegar la lista de partituras guardadas (definida en historia #8).
-- Abrir partituras específicas desde una lista de biblioteca (definida en historia #8).
-- Renombrar o eliminar partituras del almacenamiento (definida en historia #9).
-- Recordar posición exacta de desplazamiento o página específica donde se interrumpió la lectura (definida en historia #10, aplazada).
-- Tap tempo para metrónomo (definida en historia #6, aplazada).
-- Sincronización en la nube o almacenamiento externo.
+- Renombrar partituras guardadas (definida en historia #9).
+- Eliminar partituras de la biblioteca (definida en historia #9).
+- Búsqueda o filtrado de partituras por texto.
+- Carpetas, etiquetas u ordenamiento personalizado.
+- Recordar posición o desplazamiento donde se interrumpió la lectura (definida en historia #10).
 
 ## Suggestions (your call)
-- **Almacenamiento directo de Blobs/ArrayBuffer:** IndexedDB permite almacenar `Blob` o `ArrayBuffer` de forma nativa sin codificar a base64, lo cual reduce el consumo de memoria con PDFs o imágenes de alta resolución.
-- **Módulo de persistencia independiente:** Separar las funciones de acceso a la base de datos de la lógica del visor facilitará probar la persistencia de forma aislada y reutilizarla en la historia #8 al listar la biblioteca.
+- **Uso de `<dialog>` nativo para el panel de biblioteca:** Proporciona accesibilidad integrada, soporte nativo de backdrop modal y cierre estándar con la tecla Escape sin dependencias externas.
+- **Navegación de lista accesible por teclado:** Renderizar las entradas como botones interactivos en una lista semántica para facilitar el uso tanto con ratón como con teclado o pedaleras de control.

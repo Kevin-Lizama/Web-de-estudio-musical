@@ -35,6 +35,7 @@ header {
 }
 
 #open-btn,
+#library-btn,
 #autoscroll-btn,
 #metronome-btn {
   padding: 0.4rem 1rem;
@@ -48,6 +49,7 @@ header {
 }
 
 #open-btn:hover,
+#library-btn:hover,
 #autoscroll-btn:hover,
 #metronome-btn:hover {
   background: #357abd;
@@ -122,4 +124,92 @@ header {
 #empty-state p {
   font-size: 1.1rem;
 }
+
+/* ── Modal de biblioteca ─────────────────────────── */
+.library-dialog {
+  margin: auto;
+  padding: 1.5rem;
+  background: #1f1f1f;
+  color: #f0f0f0;
+  border: 1px solid #444;
+  border-radius: 8px;
+  width: min(90vw, 480px);
+  max-height: 80vh;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.7);
+}
+
+.library-dialog::backdrop {
+  background: rgba(0, 0, 0, 0.65);
+}
+
+.library-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #333;
+}
+
+.library-header h2 {
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+#close-library-btn {
+  background: transparent;
+  border: none;
+  color: #aaa;
+  font-size: 1.2rem;
+  cursor: pointer;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+#close-library-btn:hover {
+  color: #fff;
+  background: #333;
+}
+
+.library-empty {
+  padding: 1.5rem 0;
+  text-align: center;
+  color: #888;
+  font-style: italic;
+}
+
+.library-list {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  max-height: 55vh;
+  overflow-y: auto;
+}
+
+.library-item-btn {
+  width: 100%;
+  text-align: left;
+  padding: 0.6rem 0.8rem;
+  background: #2a2a2a;
+  color: #f0f0f0;
+  border: 1px solid #3d3d3d;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  transition: background 0.15s ease, border-color 0.15s ease;
+}
+
+.library-item-btn:hover {
+  background: #383838;
+  border-color: #4a90d9;
+}
+
+.library-item-btn:focus-visible {
+  background: #383838;
+  border-color: #4a90d9;
+  outline: 2px solid #4a90d9;
+  outline-offset: 1px;
+}
+
 

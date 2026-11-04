@@ -12,6 +12,7 @@
   <header>
     <span class="app-name">Estudio Musical</span>
     <button id="open-btn">Abrir partitura</button>
+    <button id="library-btn" aria-haspopup="dialog">Biblioteca</button>
     <input id="file-input" type="file" accept=".pdf,image/jpeg,image/png,image/webp" multiple hidden />
     <button id="autoscroll-btn">Auto-scroll</button>
     <label for="speed-input" class="speed-label">Velocidad</label>
@@ -33,6 +34,17 @@
       <p>Abre un archivo PDF para comenzar a leer tu partitura.</p>
     </div>
   </main>
+
+  <dialog id="library-dialog" class="library-dialog" aria-labelledby="library-dialog-title">
+    <div class="library-header">
+      <h2 id="library-dialog-title">Biblioteca</h2>
+      <button id="close-library-btn" type="button" aria-label="Cerrar biblioteca">✕</button>
+    </div>
+    <div id="library-empty" class="library-empty" hidden>
+      <p>No tienes partituras guardadas.</p>
+    </div>
+    <ul id="library-list" class="library-list"></ul>
+  </dialog>
 
   <script src="lib/pdf.min.js"></script>
   <script src="storage.js"></script>
