@@ -16,6 +16,16 @@
     <button id="autoscroll-btn">Auto-scroll</button>
     <label for="speed-input" class="speed-label">Velocidad</label>
     <input id="speed-input" type="range" min="1" max="10" value="3" aria-label="Velocidad de desplazamiento" title="Velocidad de desplazamiento" />
+    <button id="metronome-btn" aria-pressed="false">Metrónomo</button>
+    <label for="bpm-input" class="metronome-label">BPM</label>
+    <input id="bpm-input" type="number" min="40" max="240" value="120" aria-label="Tempo en BPM" title="Tempo en BPM" />
+    <label for="time-signature-select" class="metronome-label">Compás</label>
+    <select id="time-signature-select" aria-label="Compás del metrónomo" title="Compás del metrónomo">
+      <option value="2/4">2/4</option>
+      <option value="3/4">3/4</option>
+      <option value="4/4" selected>4/4</option>
+      <option value="6/8">6/8</option>
+    </select>
   </header>
 
   <main id="viewer">

@@ -84,6 +84,150 @@ let activeBtn = null;
 let activeViewer = null;
 const SPEED_FACTOR = 10; // px/segundo por unidad del control de velocidad
 
+// ── Metrónomo ─────────────────────────────────────
+const TIME_SIGNATURES = {
+  '2/4': { beats: 2 },
+  '3/4': { beats: 3 },
+  '4/4': { beats: 4 },
+  '6/8': { beats: 6 },
+};
+
+let isMetronomePlaying = false;
+let metronomeAudioCtx = null;
+let nextPulseTime = 0;
+let currentBeatInBar = 0;
+let metronomeTimerId = null;
+let activeMetronomeBtn = null;
+let activeBpmInput = null;
+let activeTimeSignatureSelect = null;
+const LOOKAHEAD_MS = 25;
+const SCHEDULE_AHEAD_SEC = 0.1;
+
+function getBpm() {
+  if (!activeBpmInput) return 120;
+  const val = Number(activeBpmInput.value);
+  if (!Number.isFinite(val)) return 120;
+  return Math.min(240, Math.max(40, val));
+}
+
+function getTimeSignatureConfig() {
+  const sig = activeTimeSignatureSelect ? activeTimeSignatureSelect.value : '4/4';
+  return TIME_SIGNATURES[sig] || TIME_SIGNATURES['4/4'];
+}
+
+function schedulePulse(time, isAccent) {
+  if (!metronomeAudioCtx) return;
+  const osc = metronomeAudioCtx.createOscillator();
+  const gain = metronomeAudioCtx.createGain();
+
+  osc.type = 'sine';
+  osc.frequency.setValueAtTime(isAccent ? 1200 : 800, time);
+
+  // Envolvente percusiva con micro-ataque suave para evitar transitorios de fase
+  if (typeof gain.gain.linearRampToValueAtTime === 'function') {
+    gain.gain.setValueAtTime(0.001, time);
+    gain.gain.linearRampToValueAtTime(1, time + 0.002);
+  } else {
+    gain.gain.setValueAtTime(1, time);
+  }
+  gain.gain.exponentialRampToValueAtTime(0.001, time + 0.035);
+
+  osc.connect(gain);
+  gain.connect(metronomeAudioCtx.destination);
+
+  // Liberación explícita de nodos al finalizar el pulso
+  osc.onended = () => {
+    if (typeof osc.disconnect === 'function') osc.disconnect();
+    if (typeof gain.disconnect === 'function') gain.disconnect();
+  };
+
+  osc.start(time);
+  osc.stop(time + 0.04);
+}
+
+function metronomeScheduler() {
+  if (!isMetronomePlaying || !metronomeAudioCtx) return;
+
+  // Guarda de resincronización ante suspensión o cambio de pestaña
+  if (nextPulseTime < metronomeAudioCtx.currentTime) {
+    nextPulseTime = metronomeAudioCtx.currentTime;
+  }
+
+  while (nextPulseTime < metronomeAudioCtx.currentTime + SCHEDULE_AHEAD_SEC) {
+    const config = getTimeSignatureConfig();
+    const isAccent = (currentBeatInBar === 0);
+    schedulePulse(nextPulseTime, isAccent);
+
+    const secondsPerPulse = 60 / getBpm();
+    nextPulseTime += secondsPerPulse;
+    currentBeatInBar = (currentBeatInBar + 1) % config.beats;
+  }
+}
+
+function getMetronomeState() {
+  return {
+    isPlaying: isMetronomePlaying,
+    currentBeat: currentBeatInBar,
+    nextPulseTime,
+    audioContext: metronomeAudioCtx,
+  };
+}
+
+function stopMetronome() {
+  if (isMetronomePlaying) {
+    isMetronomePlaying = false;
+    if (metronomeTimerId !== null) {
+      clearInterval(metronomeTimerId);
+      metronomeTimerId = null;
+    }
+    if (activeMetronomeBtn) {
+      activeMetronomeBtn.textContent = 'Metrónomo';
+      if (typeof activeMetronomeBtn.setAttribute === 'function') {
+        activeMetronomeBtn.setAttribute('aria-pressed', 'false');
+      }
+    }
+    currentBeatInBar = 0;
+    activeMetronomeBtn = null;
+    activeBpmInput = null;
+    activeTimeSignatureSelect = null;
+  }
+}
+
+function toggleMetronome(btn, bpmInput, timeSignatureSelect) {
+  if (!isMetronomePlaying) {
+    const AudioContextClass = typeof window !== 'undefined'
+      ? (window.AudioContext || window.webkitAudioContext)
+      : (typeof AudioContext !== 'undefined' ? AudioContext : null);
+
+    if (!AudioContextClass) return;
+
+    if (!metronomeAudioCtx) {
+      metronomeAudioCtx = new AudioContextClass();
+    } else if (metronomeAudioCtx.state === 'suspended') {
+      metronomeAudioCtx.resume();
+    }
+
+    isMetronomePlaying = true;
+    activeMetronomeBtn = btn;
+    activeBpmInput = bpmInput;
+    activeTimeSignatureSelect = timeSignatureSelect;
+    if (btn) {
+      btn.textContent = 'Detener';
+      if (typeof btn.setAttribute === 'function') {
+        btn.setAttribute('aria-pressed', 'true');
+      }
+    }
+
+    currentBeatInBar = 0;
+    nextPulseTime = metronomeAudioCtx.currentTime + 0.01;
+
+    metronomeScheduler();
+    metronomeTimerId = setInterval(metronomeScheduler, LOOKAHEAD_MS);
+  } else {
+    stopMetronome();
+  }
+}
+
 function getAutoScrollState() {
   return { isScrolling, rafId, lastTimestamp };
 }
@@ -189,10 +333,31 @@ if (typeof module === 'undefined') {
       toggleAutoScroll(autoscrollBtn, speedInput, viewer);
     });
   }
+
+  const metronomeBtn = document.getElementById('metronome-btn');
+  const bpmInput = document.getElementById('bpm-input');
+  const timeSignatureSelect = document.getElementById('time-signature-select');
+
+  if (metronomeBtn) {
+    metronomeBtn.addEventListener('click', () => {
+      toggleMetronome(metronomeBtn, bpmInput, timeSignatureSelect);
+    });
+  }
 }
 
 // Export para tests en Node
 if (typeof module !== 'undefined') {
-  module.exports = { renderPDF, handleFileOpen, toggleAutoScroll, stopAutoScroll, getAutoScrollState };
+  module.exports = {
+    renderPDF,
+    handleFileOpen,
+    toggleAutoScroll,
+    stopAutoScroll,
+    getAutoScrollState,
+    toggleMetronome,
+    stopMetronome,
+    getMetronomeState,
+    TIME_SIGNATURES,
+    schedulePulse,
+  };
 }
 

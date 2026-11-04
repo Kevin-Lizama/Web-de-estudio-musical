@@ -35,7 +35,8 @@ header {
 }
 
 #open-btn,
-#autoscroll-btn {
+#autoscroll-btn,
+#metronome-btn {
   padding: 0.4rem 1rem;
   background: #4a90d9;
   color: #fff;
@@ -47,11 +48,13 @@ header {
 }
 
 #open-btn:hover,
-#autoscroll-btn:hover {
+#autoscroll-btn:hover,
+#metronome-btn:hover {
   background: #357abd;
 }
 
-.speed-label {
+.speed-label,
+.metronome-label {
   font-size: 0.85rem;
   color: #bbb;
   margin-left: 0.25rem;
@@ -60,6 +63,27 @@ header {
 #speed-input {
   cursor: pointer;
   accent-color: #4a90d9;
+}
+
+#bpm-input {
+  width: 4rem;
+  padding: 0.3rem 0.5rem;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: center;
+}
+
+#time-signature-select {
+  padding: 0.3rem 0.5rem;
+  background: #2a2a2a;
+  border: 1px solid #555;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
 }
 
 /* ── Área principal ──────────────────────────────── */
