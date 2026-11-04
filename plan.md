@@ -1,28 +1,28 @@
-# Story #5 — Metrónomo con BPM ajustable y compases (2/4, 3/4, 4/4, 6/8)
+# Story #7 — Guardar partituras en biblioteca persistente
 
 ## Story
-As a musician, I want a metronome with adjustable BPM and time signature (2/4, 3/4, 4/4, 6/8), so that I can keep a steady tempo with the right accent pattern while practicing.
+As a musician, I want my uploaded scores saved in a persistent library, so that I don't have to re-upload them every session.
 
 ## Acceptance criteria
-- [x] Given el metrónomo está detenido, when presiono el botón para iniciarlo, then comienza a emitir pulsos sonoros constantes al tempo (BPM) seleccionado y el control permite detenerlo.
-- [x] Given un compás seleccionado (2/4, 3/4, 4/4 o 6/8), when el metrónomo está reproduciendo, then el primer pulso de cada compás emite un tono acentuado distintivo y los pulsos restantes emiten el tono regular.
-- [x] Given el metrónomo está en reproducción, when modifico el BPM o selecciono otro compás, then el tempo y el ciclo de acentos se ajustan inmediatamente sin reiniciar la reproducción.
+- [x] Given una partitura abierta (archivo PDF o conjunto de imágenes), when se carga en el visor, then se guarda automáticamente en el almacenamiento local persistente con su nombre y contenido binario.
+- [x] Given una partitura previamente guardada en el almacenamiento local, when recargo la página o inicio una nueva sesión, then la última partitura utilizada se recupera y renderiza automáticamente en el visor.
+- [x] Given una partitura que ya existe en la biblioteca, when vuelvo a abrirla, then se actualiza su marca de uso sin generar registros duplicados ni inconsistencias en el almacenamiento.
 
 ## Plan
-- Agregar en la barra superior los controles de usuario: botón de alternancia inicio/parada, selector de compás (2/4, 3/4, 4/4, 6/8) y control de tempo (BPM) con rango práctico (ej. 40 a 240).
-- Inicializar el contexto de audio del navegador al interactuar con el botón para sintetizar clics con dos tonos perceptualmente distintos (agudo/fuerte para el acento, estándar para los demás).
-- Implementar un programador de eventos de audio con temporizador para calcular los intervalos entre pulsos y llevar la cuenta del compás actual.
-- Aplicar en tiempo real los cambios de BPM y compás sobre el temporizador y el contador sin requerir detener el metrónomo.
-- Detener la emisión sonora, limpiar los eventos programados pendientes y reiniciar el contador de compás al pausar o detener.
+- Inicializar una base de datos local en el navegador con un almacén para partituras y metadatos de sesión.
+- Guardar automáticamente en el almacenamiento local el contenido y metadatos de cada partitura (PDF o imágenes) al cargarse con éxito en el visor.
+- Mantener un puntero o clave de la última partitura activa para identificar qué documento restaurar.
+- Al cargar la página, consultar el almacenamiento y renderizar automáticamente la última partitura activa si existe.
+- Evitar entradas duplicadas actualizando el registro existente si se abre un archivo con la misma identidad o nombre.
 
 ## Out of scope
-- Tap tempo para calcular BPM rítmicamente (definido en historia #6).
-- Indicador visual animado (péndulo o destello del compás en pantalla).
-- Carga de archivos de sonido externos (WAV/MP3) o personalización de timbres.
-- Subdivisiones rítmicas complejas (corcheas, semicorcheas, tresillos).
-- Persistencia de tempo y compás entre sesiones (historias #7+).
-- Vinculación del tempo del metrónomo con la velocidad del auto-scroll.
+- Interfaz gráfica para explorar o navegar la lista de partituras guardadas (definida en historia #8).
+- Abrir partituras específicas desde una lista de biblioteca (definida en historia #8).
+- Renombrar o eliminar partituras del almacenamiento (definida en historia #9).
+- Recordar posición exacta de desplazamiento o página específica donde se interrumpió la lectura (definida en historia #10, aplazada).
+- Tap tempo para metrónomo (definida en historia #6, aplazada).
+- Sincronización en la nube o almacenamiento externo.
 
 ## Suggestions (your call)
-- **Programador lookahead con Web Audio API:** Usar únicamente `setInterval` provoca desfases audibles si el hilo principal de la interfaz se ocupa o se cambia de pestaña. La práctica estándar con Web Audio es usar un ciclo de anticipación (lookahead) que programa los tonos con precisión en el reloj del hardware de audio (`currentTime`).
-- **Pulsos sintetizados mediante osciladores:** Generar clics breves (30–50 ms con caída exponencial de ganancia) con osciladores nativos evita depender de archivos de audio externos, previene problemas de carga asíncrona y encaja con la arquitectura sin dependencias del proyecto.
+- **Almacenamiento directo de Blobs/ArrayBuffer:** IndexedDB permite almacenar `Blob` o `ArrayBuffer` de forma nativa sin codificar a base64, lo cual reduce el consumo de memoria con PDFs o imágenes de alta resolución.
+- **Módulo de persistencia independiente:** Separar las funciones de acceso a la base de datos de la lógica del visor facilitará probar la persistencia de forma aislada y reutilizarla en la historia #8 al listar la biblioteca.

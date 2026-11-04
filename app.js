@@ -1,5 +1,9 @@
 // app.js — lógica principal del visor de partituras
 
+const storage = (typeof module !== 'undefined' && typeof require !== 'undefined')
+  ? require('./storage.js')
+  : (typeof window !== 'undefined' ? window.ScoreStorage : null);
+
 /**
  * Renderiza todas las páginas de un PDF como <canvas> dentro de `container`.
  * @param {ArrayBuffer} arrayBuffer  Contenido del PDF
@@ -7,7 +11,9 @@
  * @param {number}      viewportWidth  Ancho disponible en px (window.innerWidth en el browser)
  */
 async function renderPDF(arrayBuffer, container, viewportWidth) {
-  const pdf = await pdfjsLib.getDocument({ data: arrayBuffer }).promise;
+  // Asegura una copia del buffer para evitar que PDF.js worker lo desasocie del llamador
+  const data = (arrayBuffer instanceof ArrayBuffer) ? arrayBuffer.slice(0) : arrayBuffer;
+  const pdf = await pdfjsLib.getDocument({ data }).promise;
 
   for (let i = 1; i <= pdf.numPages; i++) {
     const page = await pdf.getPage(i);
@@ -29,12 +35,38 @@ async function renderPDF(arrayBuffer, container, viewportWidth) {
 }
 
 /**
+ * Lee de forma segura el contenido binario (ArrayBuffer) de un archivo o Blob.
+ * Utiliza la API moderna file.arrayBuffer() o FileReader como fallback.
+ * @param {Blob|File} file
+ * @returns {Promise<ArrayBuffer|null>}
+ */
+async function readFileBuffer(file) {
+  if (!file) return null;
+  if (typeof file.arrayBuffer === 'function') {
+    return await file.arrayBuffer();
+  }
+  if (typeof Blob !== 'undefined' && file instanceof Blob && typeof FileReader !== 'undefined') {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target ? e.target.result : null);
+      reader.onerror = () => resolve(null);
+      try {
+        reader.readAsArrayBuffer(file);
+      } catch {
+        resolve(null);
+      }
+    });
+  }
+  return null;
+}
+
+/**
  * Maneja la apertura de uno o varios archivos (PDF o imágenes).
  * @param {File|File[]|FileList} files      Archivo o lista de archivos seleccionados
  * @param {HTMLElement}          viewer      Contenedor principal
  * @param {HTMLElement}          emptyState  Elemento de estado vacío
  */
-function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof window !== 'undefined' ? window.innerWidth : 1024)) {
+async function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof window !== 'undefined' ? window.innerWidth : 1024), scoreStorage = storage) {
   if (!files) return;
 
   // Normalizar a array: Array.isArray cubre arrays de tests; instanceof FileList cubre el browser.
@@ -56,21 +88,47 @@ function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof windo
     el.remove();
   });
 
+  const imageEntries = [];
+
   for (const file of fileArray) {
     if (file.type && file.type.startsWith('image/')) {
       const img = document.createElement('img');
       img.src = URL.createObjectURL(file);
       viewer.appendChild(img);
+
+      const buf = await readFileBuffer(file);
+      if (buf) {
+        imageEntries.push({ name: file.name, type: file.type, buffer: buf });
+      }
     } else {
-      // Asume PDF. El atributo `accept` del input ya filtra otros tipos en el browser.
-      // Nota: si se mezclan imágenes y PDFs en la misma selección, las imágenes se renderizan
-      // síncronamente (en orden) y los PDFs asíncronamente (al final), por lo que el orden
-      // del OS no se preserva en ese caso. Mezcla de tipos está fuera de alcance (story #3).
-      const reader = new FileReader();
-      reader.onload = (ev) => {
-        renderPDF(ev.target.result, viewer, viewportWidth);
-      };
-      reader.readAsArrayBuffer(file);
+      // PDF: leemos el contenido binario y renderizamos (renderPDF ya clona el buffer internamente)
+      const rawBuffer = await readFileBuffer(file);
+      if (rawBuffer) {
+        await renderPDF(rawBuffer, viewer, viewportWidth);
+        if (scoreStorage && typeof scoreStorage.saveScore === 'function') {
+          try {
+            await scoreStorage.saveScore({
+              name: file.name,
+              type: 'pdf',
+              data: rawBuffer,
+            });
+          } catch (err) {
+            console.warn('No se pudo guardar la partitura en la biblioteca local:', err);
+          }
+        }
+      }
+    }
+  }
+
+  if (imageEntries.length > 0 && scoreStorage && typeof scoreStorage.saveScore === 'function') {
+    try {
+      await scoreStorage.saveScore({
+        name: fileArray[0].name,
+        type: 'images',
+        data: imageEntries,
+      });
+    } catch (err) {
+      console.warn('No se pudo guardar la partitura en la biblioteca local:', err);
     }
   }
 }
@@ -343,6 +401,58 @@ if (typeof module === 'undefined') {
       toggleMetronome(metronomeBtn, bpmInput, timeSignatureSelect);
     });
   }
+
+  // Restaurar automáticamente la última partitura activa al cargar la página
+  restoreLastScore(viewer, emptyState).catch((err) => {
+    console.warn('Error al restaurar última partitura activa:', err);
+  });
+}
+
+/**
+ * Restaura la última partitura activa desde el almacenamiento persistente si existe.
+ * @param {HTMLElement} viewer
+ * @param {HTMLElement} emptyState
+ * @param {number}      viewportWidth
+ * @param {Object}      scoreStorage
+ * @returns {Promise<Object|null>} Partitura restaurada o null si no hay ninguna
+ */
+async function restoreLastScore(viewer, emptyState, viewportWidth = (typeof window !== 'undefined' ? window.innerWidth : 1024), scoreStorage = storage) {
+  if (!scoreStorage || typeof scoreStorage.getLastActiveScore !== 'function') return null;
+
+  let score = null;
+  try {
+    score = await scoreStorage.getLastActiveScore();
+  } catch (err) {
+    console.warn('No se pudo recuperar la última partitura activa:', err);
+    return null;
+  }
+
+  if (!score) return null;
+
+  if (viewer && typeof viewer.querySelectorAll === 'function') {
+    viewer.querySelectorAll('canvas, img').forEach((el) => {
+      if (el.src && el.src.startsWith('blob:')) {
+        URL.revokeObjectURL(el.src);
+      }
+      el.remove();
+    });
+  }
+
+  if (emptyState) emptyState.hidden = true;
+
+  if (score.type === 'pdf') {
+    const buf = (score.data instanceof ArrayBuffer) ? score.data.slice(0) : score.data;
+    await renderPDF(buf, viewer, viewportWidth);
+  } else if (score.type === 'images' && Array.isArray(score.data)) {
+    for (const item of score.data) {
+      const blob = new Blob([item.buffer], { type: item.type || 'image/png' });
+      const img = document.createElement('img');
+      img.src = URL.createObjectURL(blob);
+      viewer.appendChild(img);
+    }
+  }
+
+  return score;
 }
 
 // Export para tests en Node
@@ -350,6 +460,7 @@ if (typeof module !== 'undefined') {
   module.exports = {
     renderPDF,
     handleFileOpen,
+    restoreLastScore,
     toggleAutoScroll,
     stopAutoScroll,
     getAutoScrollState,
