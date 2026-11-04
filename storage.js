@@ -124,12 +124,117 @@ async function listScores() {
   if (db) {
     return new Promise((resolve, reject) => {
       const tx = db.transaction([STORE_SCORES], 'readonly');
-      const req = tx.objectStore(STORE_SCORES).getAll();
-      req.onsuccess = () => resolve(req.result || []);
+      const store = tx.objectStore(STORE_SCORES);
+      const results = [];
+      const req = store.openCursor();
+      req.onsuccess = (e) => {
+        const cursor = e.target.result;
+        if (cursor) {
+          const val = cursor.value;
+          // Retornar únicamente metadatos para optimizar consumo de RAM evitando buffers pesados
+          results.push({
+            id: val.id,
+            name: val.name,
+            type: val.type,
+            updatedAt: val.updatedAt,
+          });
+          cursor.continue();
+        } else {
+          results.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+          resolve(results);
+        }
+      };
       req.onerror = () => reject(req.error);
     });
   }
-  return Array.from(memoryStore.scores.values());
+  const results = Array.from(memoryStore.scores.values()).map((val) => ({
+    id: val.id,
+    name: val.name,
+    type: val.type,
+    updatedAt: val.updatedAt,
+  }));
+  results.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
+  return results;
+}
+
+async function renameScore(id, newName) {
+  if (!id || !newName || typeof newName !== 'string') return null;
+  const trimmed = newName.trim();
+  if (!trimmed) return null;
+
+  const db = await openDB();
+  if (db) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction([STORE_SCORES], 'readwrite');
+      const store = tx.objectStore(STORE_SCORES);
+      const getReq = store.get(id);
+      getReq.onsuccess = () => {
+        const record = getReq.result;
+        if (!record) {
+          resolve(null);
+          return;
+        }
+        record.name = trimmed;
+        record.updatedAt = Date.now();
+        const putReq = store.put(record);
+        putReq.onsuccess = () => resolve(record);
+        putReq.onerror = () => reject(putReq.error);
+      };
+      getReq.onerror = () => reject(getReq.error);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  const record = memoryStore.scores.get(id);
+  if (!record) return null;
+  record.name = trimmed;
+  record.updatedAt = Date.now();
+  return record;
+}
+
+async function deleteScore(id) {
+  if (!id) return false;
+
+  const db = await openDB();
+  if (db) {
+    return new Promise((resolve, reject) => {
+      const tx = db.transaction([STORE_SCORES, STORE_META], 'readwrite');
+      const scoreStore = tx.objectStore(STORE_SCORES);
+      const metaStore = tx.objectStore(STORE_META);
+
+      const getReq = scoreStore.get(id);
+      getReq.onsuccess = () => {
+        if (!getReq.result) {
+          resolve(false);
+          return;
+        }
+
+        scoreStore.delete(id);
+
+        const metaReq = metaStore.get('lastActiveId');
+        metaReq.onsuccess = () => {
+          if (metaReq.result && metaReq.result.value === id) {
+            metaStore.delete('lastActiveId');
+          }
+        };
+
+        tx.oncomplete = () => resolve(true);
+      };
+      getReq.onerror = () => reject(getReq.error);
+      tx.onerror = () => reject(tx.error);
+    });
+  }
+
+  if (!memoryStore.scores.has(id)) {
+    return false;
+  }
+
+  memoryStore.scores.delete(id);
+  if (memoryStore.meta.get('lastActiveId') === id) {
+    memoryStore.meta.delete('lastActiveId');
+  }
+
+  return true;
 }
 
 async function clear() {
@@ -152,6 +257,8 @@ const ScoreStorage = {
   getScore,
   getLastActiveScore,
   listScores,
+  renameScore,
+  deleteScore,
   clear,
 };
 

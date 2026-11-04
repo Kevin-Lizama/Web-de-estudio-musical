@@ -1,27 +1,26 @@
-# Story #8 — Explorar y abrir partituras desde la biblioteca
+# Story #9 — Renombrar y eliminar partituras de la biblioteca
 
 ## Story
-As a musician, I want to browse my saved library and open a score from it, so that I can quickly access any piece I've previously loaded.
+As a musician, I want to rename and delete scores from my library, so that I can keep my collection organized.
 
 ## Acceptance criteria
-- [x] Given una o más partituras guardadas previamente, when abro la biblioteca, then visualizo la lista con los nombres de todas las partituras disponibles.
-- [x] Given la lista de partituras de la biblioteca visible, when elijo una partitura, then se cierra la biblioteca y la partitura seleccionada se despliega en el visor reemplazando cualquier contenido previo.
-- [x] Given una biblioteca sin partituras guardadas, when abro la biblioteca, then veo un mensaje informando que no hay partituras guardadas.
+- [x] Given una partitura guardada en la biblioteca, when modifico su nombre y confirmo el cambio, then la biblioteca refleja el nuevo nombre y este persiste en posteriores aperturas.
+- [x] Given una partitura guardada en la biblioteca, when solicito su eliminación y confirmo la acción, then la partitura se elimina permanentemente de la biblioteca y ya no aparece en la lista.
+- [x] Given la partitura abierta actualmente en el visor, when la elimino desde la biblioteca, then el visor se limpia mostrando el estado inicial vacío y deja de ser la partitura activa.
 
 ## Plan
-- Agregar un control en la barra superior para abrir y cerrar la vista o panel de biblioteca.
-- Presentar un modal o panel con la lista interactiva de partituras o un mensaje si está vacía.
-- Obtener todas las partituras guardadas del almacenamiento persistente al abrir la biblioteca.
-- Cargar y renderizar la partitura seleccionada en el visor principal y cerrar la biblioteca.
-- Actualizar la partitura seleccionada como la última activa en la sesión persistente.
+- Incorporar controles de edición de nombre y de eliminación en cada elemento de la biblioteca.
+- Implementar la actualización del nombre de la partitura en el almacenamiento persistente preservando su contenido.
+- Implementar la eliminación de la partitura en el almacenamiento persistente previa confirmación del usuario.
+- Actualizar dinámicamente la lista de la biblioteca tras renombrar o eliminar, mostrando el mensaje de vacío si no quedan elementos.
+- Limpiar el visor y reiniciar la partitura activa si la partitura eliminada es la que se encontraba desplegada.
 
 ## Out of scope
-- Renombrar partituras guardadas (definida en historia #9).
-- Eliminar partituras de la biblioteca (definida en historia #9).
-- Búsqueda o filtrado de partituras por texto.
-- Carpetas, etiquetas u ordenamiento personalizado.
-- Recordar posición o desplazamiento donde se interrumpió la lectura (definida en historia #10).
+- Papelera de reciclaje o recuperación de partituras eliminadas.
+- Edición del contenido de la partitura (agregar, quitar o reordenar páginas/imágenes).
+- Búsqueda, filtrado o categorización por etiquetas/carpetas.
+- Reordenamiento manual en la lista.
 
 ## Suggestions (your call)
-- **Uso de `<dialog>` nativo para el panel de biblioteca:** Proporciona accesibilidad integrada, soporte nativo de backdrop modal y cierre estándar con la tecla Escape sin dependencias externas.
-- **Navegación de lista accesible por teclado:** Renderizar las entradas como botones interactivos en una lista semántica para facilitar el uso tanto con ratón como con teclado o pedaleras de control.
+- **Confirmación explícita para eliminar:** Solicitar confirmación nativa antes de eliminar una partitura para evitar borrados accidentales de forma simple y sin dependencias.
+- **Flujo directo para renombrar:** Emplear una interacción simple (como un diálogo prompt nativo o campo de texto en línea) para validar y aplicar el nuevo nombre sin recargar la interfaz.

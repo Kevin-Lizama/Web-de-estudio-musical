@@ -137,33 +137,51 @@ async function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof
       // PDF: leemos el contenido binario y renderizamos (renderPDF ya clona el buffer internamente)
       const rawBuffer = await readFileBuffer(file);
       if (rawBuffer) {
-        await renderPDF(rawBuffer, viewer, viewportWidth);
-        if (scoreStorage && typeof scoreStorage.saveScore === 'function') {
-          try {
-            await scoreStorage.saveScore({
-              name: file.name,
-              type: 'pdf',
-              data: rawBuffer,
-            });
-          } catch (err) {
-            console.warn('No se pudo guardar la partitura en la biblioteca local:', err);
+        try {
+          await renderPDF(rawBuffer, viewer, viewportWidth);
+          activeScoreId = file.name;
+          if (scoreStorage && typeof scoreStorage.saveScore === 'function') {
+            try {
+              await scoreStorage.saveScore({
+                name: file.name,
+                type: 'pdf',
+                data: rawBuffer,
+              });
+            } catch (err) {
+              console.warn('No se pudo guardar la partitura en la biblioteca local:', err);
+            }
+          }
+        } catch (err) {
+          console.error('Error al renderizar el archivo PDF:', err);
+          if (!hasScorePages(viewer) && emptyState) {
+            emptyState.hidden = false;
           }
         }
       }
     }
   }
 
-  if (imageEntries.length > 0 && scoreStorage && typeof scoreStorage.saveScore === 'function') {
-    try {
-      await scoreStorage.saveScore({
-        name: fileArray[0].name,
-        type: 'images',
-        data: imageEntries,
-      });
-    } catch (err) {
-      console.warn('No se pudo guardar la partitura en la biblioteca local:', err);
+  if (imageEntries.length > 0) {
+    activeScoreId = fileArray[0].name;
+    if (scoreStorage && typeof scoreStorage.saveScore === 'function') {
+      try {
+        await scoreStorage.saveScore({
+          name: fileArray[0].name,
+          type: 'images',
+          data: imageEntries,
+        });
+      } catch (err) {
+        console.warn('No se pudo guardar la partitura en la biblioteca local:', err);
+      }
     }
   }
+}
+
+// Seguimiento de partitura activa en el visor
+let activeScoreId = null;
+
+function getActiveScoreId() {
+  return activeScoreId;
 }
 
 // Estado de auto-scroll
@@ -277,6 +295,9 @@ function stopMetronome() {
         activeMetronomeBtn.setAttribute('aria-pressed', 'false');
       }
     }
+    if (metronomeAudioCtx && typeof metronomeAudioCtx.suspend === 'function') {
+      metronomeAudioCtx.suspend().catch(() => {});
+    }
     currentBeatInBar = 0;
     activeMetronomeBtn = null;
     activeBpmInput = null;
@@ -294,8 +315,9 @@ function toggleMetronome(btn, bpmInput, timeSignatureSelect) {
 
     if (!metronomeAudioCtx) {
       metronomeAudioCtx = new AudioContextClass();
-    } else if (metronomeAudioCtx.state === 'suspended') {
-      metronomeAudioCtx.resume();
+    }
+    if (metronomeAudioCtx.state === 'suspended' && typeof metronomeAudioCtx.resume === 'function') {
+      metronomeAudioCtx.resume().catch(() => {});
     }
 
     isMetronomePlaying = true;
@@ -339,7 +361,12 @@ function stopAutoScroll() {
     isScrolling = false;
     lastTimestamp = null;
     activeSpeedInput = null;
-    if (activeBtn) activeBtn.textContent = 'Auto-scroll';
+    if (activeBtn) {
+      activeBtn.textContent = 'Auto-scroll';
+      if (typeof activeBtn.setAttribute === 'function') {
+        activeBtn.setAttribute('aria-pressed', 'false');
+      }
+    }
     if (rafId !== null) {
       cancelAnimationFrame(rafId);
       rafId = null;
@@ -370,12 +397,12 @@ function autoScrollStep(timestamp) {
     if (typeof window !== 'undefined' && typeof window.scrollBy === 'function') {
       window.scrollBy(0, deltaY);
 
-      // Auto-pausa si se alcanza el final de la partitura
+      // Auto-pausa si se alcanza el final de la partitura (con margen de tolerancia por zoom/subpixel)
       if (
         typeof document !== 'undefined' &&
         document.documentElement &&
         document.documentElement.scrollHeight > (window.innerHeight || 0) &&
-        (window.innerHeight || 0) + Math.ceil(window.scrollY || window.pageYOffset || 0) >= document.documentElement.scrollHeight
+        (window.innerHeight || 0) + Math.ceil(window.scrollY || window.pageYOffset || 0) >= document.documentElement.scrollHeight - 2
       ) {
         stopAutoScroll();
         return;
@@ -395,7 +422,12 @@ function toggleAutoScroll(btn, speedInput, viewer) {
     activeSpeedInput = speedInput;
     activeBtn = btn;
     activeViewer = viewer;
-    if (btn) btn.textContent = 'Pausar';
+    if (btn) {
+      btn.textContent = 'Pausar';
+      if (typeof btn.setAttribute === 'function') {
+        btn.setAttribute('aria-pressed', 'true');
+      }
+    }
     rafId = requestAnimationFrame(autoScrollStep);
   } else {
     stopAutoScroll();
@@ -436,19 +468,201 @@ async function openLibrary(dialog, listEl, emptyEl, scoreStorage = storage) {
     if (emptyEl) emptyEl.hidden = false;
   } else {
     if (emptyEl) emptyEl.hidden = true;
+    scores.sort((a, b) => (b.updatedAt || 0) - (a.updatedAt || 0));
     if (listEl && typeof document !== 'undefined') {
       scores.forEach((score) => {
         const li = document.createElement('li');
+        li.className = 'library-item';
+
         const btn = document.createElement('button');
         btn.type = 'button';
         btn.className = 'library-item-btn';
         btn.textContent = score.name || score.id;
         btn.dataset.id = score.id || score.name;
         li.appendChild(btn);
+
+        const actionsDiv = document.createElement('div');
+        actionsDiv.className = 'library-item-actions';
+
+        const renameBtn = document.createElement('button');
+        renameBtn.type = 'button';
+        renameBtn.className = 'library-rename-btn';
+        renameBtn.textContent = 'Renombrar';
+        renameBtn.dataset.id = score.id || score.name;
+        if (typeof renameBtn.setAttribute === 'function') {
+          renameBtn.setAttribute('aria-label', `Renombrar ${score.name || score.id}`);
+        }
+        actionsDiv.appendChild(renameBtn);
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'library-delete-btn';
+        deleteBtn.textContent = 'Eliminar';
+        deleteBtn.dataset.id = score.id || score.name;
+        if (typeof deleteBtn.setAttribute === 'function') {
+          deleteBtn.setAttribute('aria-label', `Eliminar ${score.name || score.id}`);
+        }
+        actionsDiv.appendChild(deleteBtn);
+
+        li.appendChild(actionsDiv);
         listEl.appendChild(li);
       });
     }
   }
+}
+
+/**
+ * Solicita y aplica el nuevo nombre para una partitura guardada.
+ * @param {string}      scoreId
+ * @param {HTMLElement} listEl
+ * @param {HTMLElement} emptyEl
+ * @param {Object}      scoreStorage
+ * @param {Function}    promptFn
+ * @returns {Promise<Object|null>} Partitura actualizada o null si no se modificó
+ */
+async function handleRenameScore(scoreId, listEl, emptyEl, scoreStorage = storage, promptFn = (typeof window !== 'undefined' ? window.prompt : null)) {
+  if (!scoreId || !scoreStorage || typeof scoreStorage.renameScore !== 'function') return null;
+
+  let currentScore = null;
+  if (typeof scoreStorage.getScore === 'function') {
+    currentScore = await scoreStorage.getScore(scoreId);
+  }
+  const currentName = currentScore ? currentScore.name : scoreId;
+
+  const promptHandler = typeof promptFn === 'function'
+    ? promptFn
+    : (typeof window !== 'undefined' && typeof window.prompt === 'function' ? window.prompt.bind(window) : null);
+
+  if (!promptHandler) return null;
+
+  const newName = promptHandler('Introduce el nuevo nombre para la partitura:', currentName);
+  if (newName === null) {
+    return null;
+  }
+
+  const trimmed = newName.trim();
+  if (!trimmed || trimmed === currentName) {
+    return null;
+  }
+
+  const updated = await scoreStorage.renameScore(scoreId, trimmed);
+  if (updated && listEl) {
+    if (typeof listEl.querySelectorAll === 'function') {
+      const items = listEl.querySelectorAll('.library-item');
+      for (const item of items) {
+        const b = item.querySelector('.library-item-btn');
+        if (b && b.dataset && b.dataset.id === scoreId) {
+          b.textContent = updated.name;
+          const renameBtn = item.querySelector('.library-rename-btn');
+          if (renameBtn && typeof renameBtn.setAttribute === 'function') {
+            renameBtn.setAttribute('aria-label', `Renombrar ${updated.name}`);
+          }
+          const deleteBtn = item.querySelector('.library-delete-btn');
+          if (deleteBtn && typeof deleteBtn.setAttribute === 'function') {
+            deleteBtn.setAttribute('aria-label', `Eliminar ${updated.name}`);
+          }
+        }
+      }
+    }
+    if (listEl.children) {
+      for (const li of listEl.children) {
+        const b = typeof li.querySelector === 'function'
+          ? li.querySelector('.library-item-btn')
+          : (li.children && li.children[0]);
+        if (b && b.dataset && b.dataset.id === scoreId) {
+          b.textContent = updated.name;
+          if (typeof li.querySelector === 'function') {
+            const renameBtn = li.querySelector('.library-rename-btn');
+            if (renameBtn && typeof renameBtn.setAttribute === 'function') {
+              renameBtn.setAttribute('aria-label', `Renombrar ${updated.name}`);
+            }
+            const deleteBtn = li.querySelector('.library-delete-btn');
+            if (deleteBtn && typeof deleteBtn.setAttribute === 'function') {
+              deleteBtn.setAttribute('aria-label', `Eliminar ${updated.name}`);
+            }
+          }
+        }
+      }
+    }
+  }
+
+  return updated;
+}
+
+/**
+ * Solicita confirmación y elimina una partitura del almacenamiento y de la lista de biblioteca.
+ * @param {string}      scoreId
+ * @param {HTMLElement} listEl
+ * @param {HTMLElement} emptyEl
+ * @param {Object}      scoreStorage
+ * @param {Function}    confirmFn
+ * @param {HTMLElement} viewer
+ * @param {HTMLElement} emptyState
+ * @returns {Promise<boolean>} True si fue eliminada, false en caso contrario
+ */
+async function handleDeleteScore(
+  scoreId,
+  listEl,
+  emptyEl,
+  scoreStorage = storage,
+  confirmFn = (typeof window !== 'undefined' ? window.confirm : null),
+  viewer = null,
+  emptyState = null
+) {
+  if (!scoreId || !scoreStorage || typeof scoreStorage.deleteScore !== 'function') return false;
+
+  let currentScore = null;
+  if (typeof scoreStorage.getScore === 'function') {
+    currentScore = await scoreStorage.getScore(scoreId);
+  }
+  const scoreName = currentScore ? currentScore.name : scoreId;
+
+  const confirmHandler = typeof confirmFn === 'function'
+    ? confirmFn
+    : (typeof window !== 'undefined' && typeof window.confirm === 'function' ? window.confirm.bind(window) : null);
+
+  if (confirmHandler) {
+    const confirmed = confirmHandler(`¿Deseas eliminar permanentemente la partitura "${scoreName}"?`);
+    if (!confirmed) {
+      return false;
+    }
+  }
+
+  const deleted = await scoreStorage.deleteScore(scoreId);
+  if (deleted) {
+    if (activeScoreId === scoreId) {
+      stopAutoScroll();
+      if (viewer) {
+        clearViewer(viewer);
+      }
+      if (emptyState) {
+        emptyState.hidden = false;
+      }
+      activeScoreId = null;
+    }
+
+    if (listEl && listEl.children) {
+      for (let i = listEl.children.length - 1; i >= 0; i--) {
+        const li = listEl.children[i];
+        const btn = typeof li.querySelector === 'function'
+          ? li.querySelector('.library-item-btn')
+          : (li.children && li.children[0]);
+        if (btn && btn.dataset && btn.dataset.id === scoreId) {
+          if (typeof li.remove === 'function') {
+            li.remove();
+          } else if (Array.isArray(listEl.children)) {
+            listEl.children.splice(i, 1);
+          }
+        }
+      }
+      if (listEl.children.length === 0 && emptyEl) {
+        emptyEl.hidden = false;
+      }
+    }
+    return true;
+  }
+
+  return false;
 }
 
 /**
@@ -477,7 +691,17 @@ async function openScoreById(scoreId, viewer, emptyState, dialog = null, viewpor
   stopAutoScroll();
   clearViewer(viewer);
   if (emptyState) emptyState.hidden = true;
-  await renderScore(score, viewer, viewportWidth);
+
+  try {
+    await renderScore(score, viewer, viewportWidth);
+    activeScoreId = score.id || score.name;
+  } catch (err) {
+    console.error('Error al renderizar la partitura seleccionada:', err);
+    if (!hasScorePages(viewer) && emptyState) {
+      emptyState.hidden = false;
+    }
+    return null;
+  }
 
   if (typeof scoreStorage.saveScore === 'function') {
     try {
@@ -550,7 +774,16 @@ if (typeof module === 'undefined') {
 
   if (libraryDialog) {
     libraryDialog.addEventListener('click', (e) => {
-      if (e.target === libraryDialog) {
+      if (typeof libraryDialog.getBoundingClientRect === 'function') {
+        const rect = libraryDialog.getBoundingClientRect();
+        const isInside = (
+          rect.top <= e.clientY && e.clientY <= rect.bottom &&
+          rect.left <= e.clientX && e.clientX <= rect.right
+        );
+        if (!isInside) {
+          libraryDialog.close();
+        }
+      } else if (e.target === libraryDialog) {
         libraryDialog.close();
       }
     });
@@ -559,6 +792,22 @@ if (typeof module === 'undefined') {
   let isOpeningScore = false;
   if (libraryList) {
     libraryList.addEventListener('click', (e) => {
+      const deleteBtn = e.target.closest('.library-delete-btn');
+      if (deleteBtn && deleteBtn.dataset.id) {
+        handleDeleteScore(deleteBtn.dataset.id, libraryList, libraryEmpty, storage, (typeof window !== 'undefined' && typeof window.confirm === 'function' ? window.confirm.bind(window) : null), viewer, emptyState).catch((err) => {
+          console.warn('Error al eliminar partitura:', err);
+        });
+        return;
+      }
+
+      const renameBtn = e.target.closest('.library-rename-btn');
+      if (renameBtn && renameBtn.dataset.id) {
+        handleRenameScore(renameBtn.dataset.id, libraryList, libraryEmpty, storage).catch((err) => {
+          console.warn('Error al renombrar partitura:', err);
+        });
+        return;
+      }
+
       const btn = e.target.closest('.library-item-btn');
       if (btn && btn.dataset.id && !isOpeningScore) {
         isOpeningScore = true;
@@ -603,6 +852,7 @@ async function restoreLastScore(viewer, emptyState, viewportWidth = (typeof wind
   clearViewer(viewer);
   if (emptyState) emptyState.hidden = true;
   await renderScore(score, viewer, viewportWidth);
+  activeScoreId = score.id || score.name;
 
   return score;
 }
@@ -616,7 +866,10 @@ if (typeof module !== 'undefined') {
     handleFileOpen,
     restoreLastScore,
     openLibrary,
+    handleRenameScore,
+    handleDeleteScore,
     openScoreById,
+    getActiveScoreId,
     toggleAutoScroll,
     stopAutoScroll,
     getAutoScrollState,

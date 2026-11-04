@@ -14,6 +14,6 @@ Expensive decisions: none
 6. [ ] As a musician, I want to tap a button rhythmically to set the BPM, so that I can match the tempo I have in mind without guessing a number. Requires: #5
 7. [x] As a musician, I want my uploaded scores saved in a persistent library, so that I don't have to re-upload them every session. Requires: #1
 8. [x] As a musician, I want to browse my saved library and open a score from it, so that I can quickly access any piece I've previously loaded. Requires: #7
-9. [ ] As a musician, I want to rename and delete scores from my library, so that I can keep my collection organized. Requires: #8
+9. [x] As a musician, I want to rename and delete scores from my library, so that I can keep my collection organized. Requires: #8
 10. [ ] As a musician, I want the app to remember where I left off in each score, so that I can resume practicing from the same spot. Requires: #8
 

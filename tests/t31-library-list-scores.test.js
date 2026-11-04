@@ -68,7 +68,7 @@ async function testListScores() {
   // Verificar estructura accesible de cada ítem
   listEl.children.forEach((li) => {
     assert.strictEqual(li.tagName, 'LI');
-    assert.strictEqual(li.children.length, 1);
+    assert.ok(li.children.length >= 1, 'El elemento debe contener al menos el botón de abrir');
     const btn = li.children[0];
     assert.strictEqual(btn.tagName, 'BUTTON');
     assert.strictEqual(btn.type, 'button', 'El botón debe tener type="button" explícito');

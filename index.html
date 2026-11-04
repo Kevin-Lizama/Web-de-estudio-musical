@@ -14,7 +14,7 @@
     <button id="open-btn">Abrir partitura</button>
     <button id="library-btn" aria-haspopup="dialog">Biblioteca</button>
     <input id="file-input" type="file" accept=".pdf,image/jpeg,image/png,image/webp" multiple hidden />
-    <button id="autoscroll-btn">Auto-scroll</button>
+    <button id="autoscroll-btn" aria-pressed="false">Auto-scroll</button>
     <label for="speed-input" class="speed-label">Velocidad</label>
     <input id="speed-input" type="range" min="1" max="10" value="3" aria-label="Velocidad de desplazamiento" title="Velocidad de desplazamiento" />
     <button id="metronome-btn" aria-pressed="false">Metrónomo</button>
@@ -31,7 +31,7 @@
 
   <main id="viewer">
     <div id="empty-state">
-      <p>Abre un archivo PDF para comenzar a leer tu partitura.</p>
+      <p>Abre o selecciona una partitura (PDF o imágenes) o desde tu biblioteca para comenzar.</p>
     </div>
   </main>
 
