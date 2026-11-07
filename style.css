@@ -35,7 +35,6 @@ header {
   letter-spacing: 0.03em;
 }
 
-#open-btn,
 #library-btn,
 #autoscroll-btn,
 #metronome-btn {
@@ -49,7 +48,6 @@ header {
   transition: background 0.15s ease;
 }
 
-#open-btn:hover,
 #library-btn:hover,
 #autoscroll-btn:hover,
 #metronome-btn:hover {
@@ -154,6 +152,30 @@ header {
 .library-header h2 {
   font-size: 1.2rem;
   font-weight: 600;
+}
+
+.library-actions {
+  margin-bottom: 1rem;
+}
+
+.library-open-btn {
+  width: 100%;
+  padding: 0.6rem 1rem;
+  background: #4a90d9;
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  transition: background 0.15s ease;
+}
+
+.library-open-btn:hover {
+  background: #357abd;
 }
 
 #close-library-btn {
@@ -276,7 +298,6 @@ header {
     margin-bottom: 0.25rem;
   }
 
-  #open-btn,
   #library-btn,
   #autoscroll-btn,
   #metronome-btn {

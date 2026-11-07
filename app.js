@@ -103,8 +103,11 @@ async function readFileBuffer(file) {
  * @param {File|File[]|FileList} files      Archivo o lista de archivos seleccionados
  * @param {HTMLElement}          viewer      Contenedor principal
  * @param {HTMLElement}          emptyState  Elemento de estado vacío
+ * @param {number}               viewportWidth Ancho de viewport en px
+ * @param {Object}               scoreStorage Instancia de almacenamiento
+ * @param {HTMLElement}          dialog      Diálogo modal opcional a cerrar
  */
-async function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof window !== 'undefined' ? window.innerWidth : 1024), scoreStorage = storage) {
+async function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof window !== 'undefined' ? window.innerWidth : 1024), scoreStorage = storage, dialog = null) {
   if (!files) return;
 
   // Normalizar a array: Array.isArray cubre arrays de tests; instanceof FileList cubre el browser.
@@ -174,6 +177,10 @@ async function handleFileOpen(files, viewer, emptyState, viewportWidth = (typeof
         console.warn('No se pudo guardar la partitura en la biblioteca local:', err);
       }
     }
+  }
+
+  if (dialog && typeof dialog.close === 'function') {
+    dialog.close();
   }
 }
 
@@ -731,11 +738,12 @@ if (typeof module === 'undefined') {
   const emptyState    = document.getElementById('empty-state');
   const autoscrollBtn = document.getElementById('autoscroll-btn');
   const speedInput    = document.getElementById('speed-input');
+  const libraryDialog = document.getElementById('library-dialog');
 
   openBtn.addEventListener('click', () => fileInput.click());
 
   fileInput.addEventListener('change', (e) => {
-    handleFileOpen(e.target.files, viewer, emptyState);
+    handleFileOpen(e.target.files, viewer, emptyState, window.innerWidth, storage, libraryDialog);
   });
 
   if (autoscrollBtn) {
@@ -755,7 +763,6 @@ if (typeof module === 'undefined') {
   }
 
   const libraryBtn = document.getElementById('library-btn');
-  const libraryDialog = document.getElementById('library-dialog');
   const closeLibraryBtn = document.getElementById('close-library-btn');
   const libraryList = document.getElementById('library-list');
   const libraryEmpty = document.getElementById('library-empty');

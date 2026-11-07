@@ -1,26 +1,25 @@
-# Story #9 — Renombrar y eliminar partituras de la biblioteca
+# Story #11 — Mover "Abrir partitura" al panel de biblioteca
 
 ## Story
-As a musician, I want to rename and delete scores from my library, so that I can keep my collection organized.
+As a musician, I want the "open score" action inside the library panel instead of the navbar, so that the top bar stays uncluttered.
 
 ## Acceptance criteria
-- [x] Given una partitura guardada en la biblioteca, when modifico su nombre y confirmo el cambio, then la biblioteca refleja el nuevo nombre y este persiste en posteriores aperturas.
-- [x] Given una partitura guardada en la biblioteca, when solicito su eliminación y confirmo la acción, then la partitura se elimina permanentemente de la biblioteca y ya no aparece en la lista.
-- [x] Given la partitura abierta actualmente en el visor, when la elimino desde la biblioteca, then el visor se limpia mostrando el estado inicial vacío y deja de ser la partitura activa.
+- [x] Given el panel de biblioteca abierto, when lo inspecciono visualmente, then veo un botón "Abrir partitura" dentro del panel que permite seleccionar archivos (PDF o imágenes) para cargar.
+- [x] Given el panel de biblioteca abierto, when pulso el botón "Abrir partitura" y selecciono un archivo, then la partitura se carga en el visor, se guarda en la biblioteca y el diálogo se cierra, exactamente igual que la funcionalidad actual del botón en la navbar.
+- [x] Given la barra de navegación superior, when la inspecciono, then ya no contiene el botón "Abrir partitura" ni el input de archivo oculto asociado.
 
 ## Plan
-- Incorporar controles de edición de nombre y de eliminación en cada elemento de la biblioteca.
-- Implementar la actualización del nombre de la partitura en el almacenamiento persistente preservando su contenido.
-- Implementar la eliminación de la partitura en el almacenamiento persistente previa confirmación del usuario.
-- Actualizar dinámicamente la lista de la biblioteca tras renombrar o eliminar, mostrando el mensaje de vacío si no quedan elementos.
-- Limpiar el visor y reiniciar la partitura activa si la partitura eliminada es la que se encontraba desplegada.
+- Eliminar el botón `#open-btn` y el `<input #file-input>` del `<header>` en el HTML y moverlos dentro del `<dialog>` de biblioteca (por ejemplo, debajo del título o encima de la lista).
+- Ajustar el wiring del browser en `app.js` para que el listener de click y el handler de `change` del input apunten a los elementos reubicados dentro del diálogo, y cerrar el diálogo tras una carga exitosa.
+- Limpiar las reglas CSS que apliquen exclusivamente al botón `#open-btn` en la navbar y, si es necesario, agregar estilos para su nueva posición dentro del modal.
+- Actualizar los tests existentes que dependan de la presencia de `#open-btn` en el `<header>` para que reflejen su nueva ubicación dentro del diálogo de biblioteca.
+- Verificar que la carga desde la biblioteca (seleccionar archivo → guardar → renderizar → cerrar diálogo) funcione correctamente de extremo a extremo.
 
 ## Out of scope
-- Papelera de reciclaje o recuperación de partituras eliminadas.
-- Edición del contenido de la partitura (agregar, quitar o reordenar páginas/imágenes).
-- Búsqueda, filtrado o categorización por etiquetas/carpetas.
-- Reordenamiento manual en la lista.
+- Drag-and-drop de archivos sobre el panel de biblioteca o sobre el visor.
+- Reorganizar otros controles de la barra de navegación (auto-scroll, metrónomo).
+- Cambiar el diseño visual general del modal de biblioteca más allá de acomodar el botón.
+- Agregar un botón secundario de "abrir" en el estado vacío del visor principal.
 
 ## Suggestions (your call)
-- **Confirmación explícita para eliminar:** Solicitar confirmación nativa antes de eliminar una partitura para evitar borrados accidentales de forma simple y sin dependencias.
-- **Flujo directo para renombrar:** Emplear una interacción simple (como un diálogo prompt nativo o campo de texto en línea) para validar y aplicar el nuevo nombre sin recargar la interfaz.
+- **Botón de "Abrir" también en el empty state:** Si la única forma de cargar una partitura requiere abrir primero la biblioteca, podría resultar un paso extra para el primer uso. Una alternativa sería mantener un CTA en el `#empty-state` que abra directamente el diálogo de selección de archivos o que abra la biblioteca. Solo tiene sentido si notas fricción en el flujo de primera carga.
