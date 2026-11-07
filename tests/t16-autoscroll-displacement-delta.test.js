@@ -1,13 +1,12 @@
 // T16: auto-scroll displacement is proportional to speed and elapsed time delta
-// Verifica de forma realista que en cada frame:
-// 1. Se calcule el delta de tiempo transcurrido (timestamp - lastTimestamp).
-// 2. Se invoque window.scrollBy(0, deltaY) proporcional a (speed * deltaMs).
-// 3. Si deltaMs se duplica, el desplazamiento se duplica proporcionalmente.
+// Con scrollTo sub-pixel, cada frame recibe la posición acumulada exacta.
+// Verifica que el delta de posición entre frames sea proporcional a deltaMs.
+// Usamos deltas de 100ms y 200ms a speed=5 → 5px y 10px respectivamente.
 
 const assert = require('assert');
 
+const scrollToCalls = [];
 let currentCallback = null;
-const scrollCalls = [];
 
 global.requestAnimationFrame = (cb) => {
   currentCallback = cb;
@@ -16,9 +15,8 @@ global.requestAnimationFrame = (cb) => {
 global.cancelAnimationFrame = () => {};
 
 global.window = {
-  scrollBy: (x, y) => {
-    scrollCalls.push({ x, y });
-  },
+  scrollY: 0,
+  scrollTo: (x, y) => { scrollToCalls.push({ x, y }); },
 };
 
 function createMockViewer() {
@@ -38,30 +36,33 @@ const viewer = createMockViewer();
 
 const { toggleAutoScroll } = require('../app.js');
 
-// Iniciar scroll con speed = 5
+// speed=5, SPEED_FACTOR=10 → 50 px/s
 toggleAutoScroll(btn, speedInput, viewer);
 assert.ok(currentCallback, 'requestAnimationFrame debe registrar un callback');
 
-// Frame 1: tiempo inicial 1000ms (establece lastTimestamp)
-currentCallback(1000);
-assert.strictEqual(scrollCalls.length, 0, 'El primer frame inicializa timestamp sin desplazar');
+// Frame 1: inicializa timestamp (no hay scroll todavía)
+currentCallback(0);
+assert.strictEqual(scrollToCalls.length, 0, 'El primer frame inicializa timestamp sin desplazar');
 
-// Frame 2: tiempo 1050ms (deltaMs = 50ms)
-currentCallback(1050);
-assert.strictEqual(scrollCalls.length, 1, 'Debe haber llamado a window.scrollBy en el segundo frame');
-const firstDeltaY = scrollCalls[0].y;
-assert.ok(firstDeltaY > 0, 'El desplazamiento vertical deltaY debe ser mayor a 0');
+// Frame 2: +100ms → deltaY = 5*10*100/1000 = 5 px → scrollTo(0, 5)
+currentCallback(100);
+assert.strictEqual(scrollToCalls.length, 1, 'Debe llamar a scrollTo en el segundo frame');
+const pos1 = scrollToCalls[0].y;
+assert.ok(pos1 > 0, 'La posición debe ser mayor a 0');
 
-// Frame 3: tiempo 1150ms (deltaMs = 100ms -> el doble de tiempo que el anterior)
-currentCallback(1150);
-assert.strictEqual(scrollCalls.length, 2, 'Debe haber llamado a window.scrollBy en el tercer frame');
-const secondDeltaY = scrollCalls[1].y;
+// Frame 3: +200ms → deltaY = 5*10*200/1000 = 10 px → scrollTo(0, 15)
+currentCallback(300);
+assert.strictEqual(scrollToCalls.length, 2, 'Debe llamar a scrollTo en el tercer frame');
+const pos2 = scrollToCalls[1].y;
 
-// Verificación de proporcionalidad directa con el tiempo: 100ms debe desplazar el doble que 50ms
+// El delta de posición del frame 3 debe ser el doble que el del frame 2
+const delta1 = pos1 - 0;         // 5 px
+const delta2 = pos2 - pos1;      // 10 px
+
 assert.strictEqual(
-  Math.round(secondDeltaY * 100) / 100,
-  Math.round(firstDeltaY * 2 * 100) / 100,
-  'El desplazamiento debe ser exactamente proporcional al delta de tiempo'
+  Math.round(delta2 * 100) / 100,
+  Math.round(delta1 * 2 * 100) / 100,
+  `El desplazamiento debe ser proporcional al tiempo: ${delta1 * 2} esperado, recibido ${delta2}`
 );
 
 console.log('✅ T16 passed: displacement is proportional to speed and elapsed time delta');

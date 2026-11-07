@@ -195,10 +195,12 @@ function getActiveScoreId() {
 let isScrolling = false;
 let rafId = null;
 let lastTimestamp = null;
+let scrollPosition = 0; // posición exacta en float para sub-pixel suave
 let activeSpeedInput = null;
 let activeBtn = null;
 let activeViewer = null;
 const SPEED_FACTOR = 10; // px/segundo por unidad del control de velocidad
+const MIN_SPEED = 0.2; // límite inferior para velocidades lentas (2 px/s)
 
 // ── Metrónomo ─────────────────────────────────────
 const TIME_SIGNATURES = {
@@ -398,18 +400,20 @@ function autoScrollStep(timestamp) {
     const deltaMs = Math.min(timestamp - lastTimestamp, 500);
     lastTimestamp = timestamp;
 
-    const speed = activeSpeedInput ? Math.max(1, Number(activeSpeedInput.value) || 1) : 1;
+    const rawSpeed = activeSpeedInput ? Number(activeSpeedInput.value) : 1;
+    const speed = Number.isFinite(rawSpeed) && rawSpeed > 0 ? Math.max(MIN_SPEED, rawSpeed) : 1;
     const deltaY = (speed * SPEED_FACTOR * deltaMs) / 1000;
 
-    if (typeof window !== 'undefined' && typeof window.scrollBy === 'function') {
-      window.scrollBy(0, deltaY);
+    if (typeof window !== 'undefined' && typeof window.scrollTo === 'function') {
+      scrollPosition += deltaY;
+      window.scrollTo(0, scrollPosition);
 
-      // Auto-pausa si se alcanza el final de la partitura (con margen de tolerancia por zoom/subpixel)
+      // Auto-pausa si se alcanza el final de la partitura
       if (
         typeof document !== 'undefined' &&
         document.documentElement &&
         document.documentElement.scrollHeight > (window.innerHeight || 0) &&
-        (window.innerHeight || 0) + Math.ceil(window.scrollY || window.pageYOffset || 0) >= document.documentElement.scrollHeight - 2
+        scrollPosition >= document.documentElement.scrollHeight - (window.innerHeight || 0) - 2
       ) {
         stopAutoScroll();
         return;
@@ -426,6 +430,11 @@ function toggleAutoScroll(btn, speedInput, viewer) {
 
     isScrolling = true;
     lastTimestamp = null;
+    // Sincronizar posición con la posición real de la ventana al (re)iniciar
+    // Esto permite que el scroll continúe correctamente tras una pausa
+    if (typeof window !== 'undefined' && typeof window.scrollY === 'number') {
+      scrollPosition = window.scrollY;
+    }
     activeSpeedInput = speedInput;
     activeBtn = btn;
     activeViewer = viewer;
@@ -880,6 +889,7 @@ if (typeof module !== 'undefined') {
     toggleAutoScroll,
     stopAutoScroll,
     getAutoScrollState,
+    MIN_SPEED,
     toggleMetronome,
     stopMetronome,
     getMetronomeState,

@@ -1,25 +1,24 @@
-# Story #11 — Mover "Abrir partitura" al panel de biblioteca
+# Story #12 — Velocidades de auto-scroll más lentas
 
 ## Story
-As a musician, I want the "open score" action inside the library panel instead of the navbar, so that the top bar stays uncluttered.
+As a musician, I want slower auto-scroll speed options than the current minimum, so that I can follow pieces with very slow tempos. Requires: #4
 
 ## Acceptance criteria
-- [x] Given el panel de biblioteca abierto, when lo inspecciono visualmente, then veo un botón "Abrir partitura" dentro del panel que permite seleccionar archivos (PDF o imágenes) para cargar.
-- [x] Given el panel de biblioteca abierto, when pulso el botón "Abrir partitura" y selecciono un archivo, then la partitura se carga en el visor, se guarda en la biblioteca y el diálogo se cierra, exactamente igual que la funcionalidad actual del botón en la navbar.
-- [x] Given la barra de navegación superior, when la inspecciono, then ya no contiene el botón "Abrir partitura" ni el input de archivo oculto asociado.
+- [x] Given auto-scroll activo con el slider en su valor mínimo, when observo la partitura, then avanza a una velocidad notablemente menor que el mínimo anterior (≈ la mitad o menos de los 10 px/s actuales).
+- [x] Given auto-scroll activo, when muevo el slider por todo su rango, then la velocidad cambia de forma gradual y continua desde el nuevo mínimo lento hasta el máximo existente, sin saltos ni zonas muertas.
 
 ## Plan
-- Eliminar el botón `#open-btn` y el `<input #file-input>` del `<header>` en el HTML y moverlos dentro del `<dialog>` de biblioteca (por ejemplo, debajo del título o encima de la lista).
-- Ajustar el wiring del browser en `app.js` para que el listener de click y el handler de `change` del input apunten a los elementos reubicados dentro del diálogo, y cerrar el diálogo tras una carga exitosa.
-- Limpiar las reglas CSS que apliquen exclusivamente al botón `#open-btn` en la navbar y, si es necesario, agregar estilos para su nueva posición dentro del modal.
-- Actualizar los tests existentes que dependan de la presencia de `#open-btn` en el `<header>` para que reflejen su nueva ubicación dentro del diálogo de biblioteca.
-- Verificar que la carga desde la biblioteca (seleccionar archivo → guardar → renderizar → cerrar diálogo) funcione correctamente de extremo a extremo.
+- Extender el rango inferior del slider de velocidad para admitir valores por debajo del mínimo actual, de modo que el scroll pueda avanzar a una fracción de la velocidad piso anterior.
+- Ajustar la guarda/clamp que impone un piso de velocidad para que respete el nuevo límite inferior.
+- Asegurar que el valor por defecto siga ofreciendo una velocidad de inicio razonable dentro del nuevo rango.
+- Actualizar los tests de desplazamiento y cambio de velocidad en vivo para que reflejen el nuevo rango y sigan pasando.
+- Verificar de extremo a extremo que el auto-scroll arranque, pause y cambie de velocidad correctamente con valores en la zona lenta.
 
 ## Out of scope
-- Drag-and-drop de archivos sobre el panel de biblioteca o sobre el visor.
-- Reorganizar otros controles de la barra de navegación (auto-scroll, metrónomo).
-- Cambiar el diseño visual general del modal de biblioteca más allá de acomodar el botón.
-- Agregar un botón secundario de "abrir" en el estado vacío del visor principal.
+- Cambiar la velocidad máxima o agregar un segundo control de velocidad.
+- Botones de velocidad preestablecida o etiquetas con nombre (e.g., "Lento", "Moderato").
+- Vincular la velocidad de scroll al BPM del metrónomo.
+- Cambiar la UX del auto-scroll más allá del rango del slider (e.g., control por gestos).
 
 ## Suggestions (your call)
-- **Botón de "Abrir" también en el empty state:** Si la única forma de cargar una partitura requiere abrir primero la biblioteca, podría resultar un paso extra para el primer uso. Una alternativa sería mantener un CTA en el `#empty-state` que abra directamente el diálogo de selección de archivos o que abra la biblioteca. Solo tiene sentido si notas fricción en el flujo de primera carga.
+- **Escala no lineal (logarítmica o cuadrática):** Si al extender el rango hacia abajo el slider se siente como que los primeros niveles "son todos iguales" y el salto a velocidad alta es brusco, una curva no lineal le daría más resolución a la zona lenta sin sacrificar el extremo rápido. Solo tiene sentido si al probar el rango lineal extendido la graduación se siente desbalanceada.

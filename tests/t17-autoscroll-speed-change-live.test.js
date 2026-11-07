@@ -1,11 +1,10 @@
 // T17: changing speed slider adjusts scroll delta in real-time without restarting
-// Verifica con contenedor DOM dinámico que al modificar speedInput.value mientras
-// el auto-scroll está activo, el siguiente frame aplica la nueva velocidad de inmediato.
+// Con scrollTo sub-pixel, compara el delta de posición entre frames a distintas velocidades.
 
 const assert = require('assert');
 
+const scrollToCalls = [];
 let currentCallback = null;
-const scrollCalls = [];
 
 global.requestAnimationFrame = (cb) => {
   currentCallback = cb;
@@ -14,9 +13,8 @@ global.requestAnimationFrame = (cb) => {
 global.cancelAnimationFrame = () => {};
 
 global.window = {
-  scrollBy: (x, y) => {
-    scrollCalls.push({ x, y });
-  },
+  scrollY: 0,
+  scrollTo: (x, y) => { scrollToCalls.push({ x, y }); },
 };
 
 function createMockViewer() {
@@ -42,27 +40,29 @@ toggleAutoScroll(btn, speedInput, viewer);
 // Frame 1: inicializa timestamp
 currentCallback(1000);
 
-// Frame 2: tiempo 1050ms con velocidad 2 (delta = 50ms)
+// Frame 2: +50ms a velocidad 2 → deltaY = 2*10*50/1000 = 1 px
 currentCallback(1050);
-assert.strictEqual(scrollCalls.length, 1);
-const deltaSpeed2 = scrollCalls[0].y;
+assert.strictEqual(scrollToCalls.length, 1, 'Debe llamar scrollTo en frame 2');
+const pos1 = scrollToCalls[0].y;
+const deltaSpeed2 = pos1 - 0;  // 1 px
 
-// El usuario cambia el slider a velocidad 6 en tiempo real (3x más rápido)
+// El usuario cambia el slider a velocidad 6 (3x más rápido)
 speedInput.value = '6';
 
-// Frame 3: tiempo 1100ms con velocidad 6 (mismo delta = 50ms)
+// Frame 3: +50ms a velocidad 6 → deltaY = 6*10*50/1000 = 3 px
 currentCallback(1100);
-assert.strictEqual(scrollCalls.length, 2);
-const deltaSpeed6 = scrollCalls[1].y;
+assert.strictEqual(scrollToCalls.length, 2, 'Debe llamar scrollTo en frame 3');
+const pos2 = scrollToCalls[1].y;
+const deltaSpeed6 = pos2 - pos1;  // 3 px
 
 // Verifica que el scroll no se detuvo
 assert.strictEqual(getAutoScrollState().isScrolling, true, 'El scroll debe permanecer activo');
 
-// Verifica que el desplazamiento a velocidad 6 sea exactamente el triple que a velocidad 2 para el mismo deltaMs
+// A velocidad 6 el delta debe ser exactamente 3x el de velocidad 2
 assert.strictEqual(
   Math.round(deltaSpeed6 * 100) / 100,
   Math.round(deltaSpeed2 * 3 * 100) / 100,
-  'La velocidad en el frame 3 debe reflejar el cambio inmediato a velocidad 6 (3x)'
+  `La velocidad en frame 3 debe ser 3x: esperado ${deltaSpeed2 * 3}, recibido ${deltaSpeed6}`
 );
 
 console.log('✅ T17 passed: speed slider change updates scroll rate in real-time');

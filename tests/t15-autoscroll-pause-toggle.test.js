@@ -12,7 +12,8 @@ const assert = require('assert');
 let activeCallback = null;
 let currentRafId = 100;
 let cancelledId = null;
-const scrollCalls = [];
+const scrollToCalls = [];
+let mockScrollY = 0;
 
 global.requestAnimationFrame = (cb) => {
   activeCallback = cb;
@@ -24,8 +25,10 @@ global.cancelAnimationFrame = (id) => {
 };
 
 global.window = {
-  scrollBy: (x, y) => {
-    scrollCalls.push({ x, y });
+  get scrollY() { return mockScrollY; },
+  scrollTo: (x, y) => {
+    mockScrollY = y;
+    scrollToCalls.push({ x, y });
   },
 };
 
@@ -42,10 +45,10 @@ toggleAutoScroll(btn, speedInput, viewer);
 assert.strictEqual(btn.textContent, 'Pausar');
 assert.strictEqual(getAutoScrollState().isScrolling, true);
 // Frame 1: baseline (programa nuevo frame)
-activeCallback(1000); 
-// Frame 2: delta 50ms (programa el frame activo actual)
-activeCallback(1050); 
-assert.strictEqual(scrollCalls.length, 1);
+activeCallback(1000);
+// Frame 2: delta 50ms → speed=5, 5*10*50/1000 = 2.5 px → scrollTo(0, 2.5)
+activeCallback(1050);
+assert.strictEqual(scrollToCalls.length, 1, 'Debe haber una llamada a scrollTo en el segundo frame');
 assert.strictEqual(getAutoScrollState().lastTimestamp, 1050, 'lastTimestamp debe tener el valor del último frame ejecutado');
 
 // Guardamos el último id de frame programado que debe cancelarse al pausar
@@ -62,7 +65,7 @@ assert.strictEqual(getAutoScrollState().lastTimestamp, null, 'lastTimestamp debe
 
 // Si el callback anterior intentara ejecutarse tras la pausa, no debe desplazar
 activeCallback(1100);
-assert.strictEqual(scrollCalls.length, 1, 'Un callback ejecutado tras pausar no debe realizar scroll');
+assert.strictEqual(scrollToCalls.length, 1, 'Un callback ejecutado tras pausar no debe realizar scroll');
 
 // 3. Reanudar después de 10 segundos de pausa (tiempo 11100ms)
 toggleAutoScroll(btn, speedInput, viewer);
@@ -71,11 +74,12 @@ assert.strictEqual(getAutoScrollState().isScrolling, true);
 
 // Frame 1 tras reanudar: debe tomar 11100 como nuevo baseline sin desplazar de golpe
 activeCallback(11100);
-assert.strictEqual(scrollCalls.length, 1, 'El primer frame tras reanudar no debe provocar un salto acumulado');
+assert.strictEqual(scrollToCalls.length, 1, 'El primer frame tras reanudar no debe provocar un salto acumulado');
 
 // Frame 2 tras reanudar: delta normal de 50ms (tiempo 11150ms)
 activeCallback(11150);
-assert.strictEqual(scrollCalls.length, 2, 'El segundo frame tras reanudar debe reanudar el desplazamiento normal');
-assert.ok(scrollCalls[1].y > 0 && scrollCalls[1].y < 50, 'El desplazamiento debe corresponder a un delta de 50ms, no a los 10 segundos pausados');
+assert.strictEqual(scrollToCalls.length, 2, 'El segundo frame tras reanudar debe reanudar el desplazamiento normal');
+const resumeDeltaY = scrollToCalls[1].y - scrollToCalls[0].y;
+assert.ok(resumeDeltaY > 0 && resumeDeltaY < 50, `El desplazamiento al reanudar debe ser pequeño (50ms), no gigante: fue ${resumeDeltaY}`);
 
 console.log('✅ T15 passed: pause stops auto-scroll cleanly, resets timestamps and prevents time-jump on resume');

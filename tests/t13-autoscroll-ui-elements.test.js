@@ -31,5 +31,13 @@ assert.ok(
   'El control #speed-input debe ser de tipo "range"'
 );
 
+const minMatch = matchRange[0].match(/min="([^"]+)"/);
+assert.ok(minMatch, 'El control #speed-input debe definir un atributo min');
+const minValue = parseFloat(minMatch[1]);
+assert.ok(
+  minValue > 0 && minValue <= 0.5,
+  `El mínimo del slider debe ser mayor a 0 y menor o igual a 0.5 (actual: ${minValue})`
+);
+
 console.log('✅ T13 passed: auto-scroll UI elements are present in header');
 
