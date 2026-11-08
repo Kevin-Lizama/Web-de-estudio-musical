@@ -105,10 +105,13 @@ assert.ok(audioCtx.createdOscillators.length >= 1, 'Debe haberse programado al m
 assert.ok(audioCtx.createdGainNodes.length >= 1, 'Debe haberse creado al menos un nodo de ganancia para modelar la envolvente');
 
 const firstOsc = audioCtx.createdOscillators[0];
-const firstGain = audioCtx.createdGainNodes[0];
+const masterGain = audioCtx.createdGainNodes[0];
+const pulseGain = audioCtx.createdGainNodes[1];
 
-assert.strictEqual(firstOsc.destination, firstGain, 'El oscilador debe conectarse al nodo de ganancia');
-assert.strictEqual(firstGain.destination, audioCtx.destination, 'La ganancia debe conectarse a destination');
+assert.ok(pulseGain, 'Debe haberse creado el nodo de ganancia para la envolvente del pulso');
+assert.strictEqual(firstOsc.destination, pulseGain, 'El oscilador debe conectarse al nodo de ganancia del pulso');
+assert.strictEqual(pulseGain.destination, masterGain, 'La ganancia de pulso debe conectarse al masterGain');
+assert.strictEqual(masterGain.destination, audioCtx.destination, 'El masterGain debe conectarse a destination');
 assert.strictEqual(typeof firstOsc.startedAt, 'number', 'El oscilador debe tener un tiempo de inicio programado');
 assert.ok(firstOsc.startedAt >= audioCtx.currentTime, 'El inicio del pulso debe ser >= currentTime');
 assert.ok(firstOsc.stoppedAt > firstOsc.startedAt, 'El fin del pulso debe ser posterior a su inicio');

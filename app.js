@@ -212,12 +212,15 @@ const TIME_SIGNATURES = {
 
 let isMetronomePlaying = false;
 let metronomeAudioCtx = null;
+let metronomeMasterGain = null;
 let nextPulseTime = 0;
 let currentBeatInBar = 0;
 let metronomeTimerId = null;
 let activeMetronomeBtn = null;
 let activeBpmInput = null;
 let activeTimeSignatureSelect = null;
+let activeVolumeInput = null;
+let metronomeCurrentVolume = 0.8;
 const LOOKAHEAD_MS = 25;
 const SCHEDULE_AHEAD_SEC = 0.1;
 
@@ -226,6 +229,35 @@ function getBpm() {
   const val = Number(activeBpmInput.value);
   if (!Number.isFinite(val)) return 120;
   return Math.min(240, Math.max(40, val));
+}
+
+function getMetronomeVolume() {
+  if (activeVolumeInput) {
+    const val = Number(activeVolumeInput.value);
+    if (Number.isFinite(val)) {
+      metronomeCurrentVolume = Math.min(1, Math.max(0, val));
+    }
+  }
+  return metronomeCurrentVolume;
+}
+
+function updateMetronomeVolume(vol) {
+  if (vol !== undefined) {
+    const num = Number(vol);
+    if (Number.isFinite(num)) {
+      metronomeCurrentVolume = Math.min(1, Math.max(0, num));
+    }
+  } else {
+    getMetronomeVolume();
+  }
+
+  if (metronomeMasterGain && metronomeAudioCtx) {
+    if (typeof metronomeMasterGain.gain.setValueAtTime === 'function') {
+      metronomeMasterGain.gain.setValueAtTime(metronomeCurrentVolume, metronomeAudioCtx.currentTime);
+    } else {
+      metronomeMasterGain.gain.value = metronomeCurrentVolume;
+    }
+  }
 }
 
 function getTimeSignatureConfig() {
@@ -251,7 +283,7 @@ function schedulePulse(time, isAccent) {
   gain.gain.exponentialRampToValueAtTime(0.001, time + 0.035);
 
   osc.connect(gain);
-  gain.connect(metronomeAudioCtx.destination);
+  gain.connect(metronomeMasterGain || metronomeAudioCtx.destination);
 
   // Liberación explícita de nodos al finalizar el pulso
   osc.onended = () => {
@@ -288,6 +320,7 @@ function getMetronomeState() {
     currentBeat: currentBeatInBar,
     nextPulseTime,
     audioContext: metronomeAudioCtx,
+    masterGainNode: metronomeMasterGain,
   };
 }
 
@@ -314,7 +347,7 @@ function stopMetronome() {
   }
 }
 
-function toggleMetronome(btn, bpmInput, timeSignatureSelect) {
+function toggleMetronome(btn, bpmInput, timeSignatureSelect, volumeInput) {
   if (!isMetronomePlaying) {
     const AudioContextClass = typeof window !== 'undefined'
       ? (window.AudioContext || window.webkitAudioContext)
@@ -325,6 +358,10 @@ function toggleMetronome(btn, bpmInput, timeSignatureSelect) {
     if (!metronomeAudioCtx) {
       metronomeAudioCtx = new AudioContextClass();
     }
+    if (!metronomeMasterGain) {
+      metronomeMasterGain = metronomeAudioCtx.createGain();
+      metronomeMasterGain.connect(metronomeAudioCtx.destination);
+    }
     if (metronomeAudioCtx.state === 'suspended' && typeof metronomeAudioCtx.resume === 'function') {
       metronomeAudioCtx.resume().catch(() => {});
     }
@@ -333,6 +370,11 @@ function toggleMetronome(btn, bpmInput, timeSignatureSelect) {
     activeMetronomeBtn = btn;
     activeBpmInput = bpmInput;
     activeTimeSignatureSelect = timeSignatureSelect;
+    if (volumeInput) {
+      activeVolumeInput = volumeInput;
+    }
+    updateMetronomeVolume();
+
     if (btn) {
       btn.textContent = 'Detener';
       if (typeof btn.setAttribute === 'function') {
@@ -764,10 +806,17 @@ if (typeof module === 'undefined') {
   const metronomeBtn = document.getElementById('metronome-btn');
   const bpmInput = document.getElementById('bpm-input');
   const timeSignatureSelect = document.getElementById('time-signature-select');
+  const volumeInput = document.getElementById('volume-input');
+
+  if (volumeInput) {
+    volumeInput.addEventListener('input', () => {
+      updateMetronomeVolume(volumeInput.value);
+    });
+  }
 
   if (metronomeBtn) {
     metronomeBtn.addEventListener('click', () => {
-      toggleMetronome(metronomeBtn, bpmInput, timeSignatureSelect);
+      toggleMetronome(metronomeBtn, bpmInput, timeSignatureSelect, volumeInput);
     });
   }
 
@@ -895,6 +944,7 @@ if (typeof module !== 'undefined') {
     getMetronomeState,
     TIME_SIGNATURES,
     schedulePulse,
+    updateMetronomeVolume,
   };
 }
 

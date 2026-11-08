@@ -1,24 +1,25 @@
-# Story #12 — Velocidades de auto-scroll más lentas
+# Story #13 — Volumen del metrónomo
 
 ## Story
-As a musician, I want slower auto-scroll speed options than the current minimum, so that I can follow pieces with very slow tempos. Requires: #4
+As a musician, I want to adjust the metronome volume, so that I can balance it against my instrument or mute it entirely at minimum volume. Requires: #5
 
 ## Acceptance criteria
-- [x] Given auto-scroll activo con el slider en su valor mínimo, when observo la partitura, then avanza a una velocidad notablemente menor que el mínimo anterior (≈ la mitad o menos de los 10 px/s actuales).
-- [x] Given auto-scroll activo, when muevo el slider por todo su rango, then la velocidad cambia de forma gradual y continua desde el nuevo mínimo lento hasta el máximo existente, sin saltos ni zonas muertas.
+- [x] Given the metronome playing, when I move the volume slider, then the loudness of the clicks changes immediately without restarting the metronome.
+- [x] Given the volume slider set to minimum (0), when the metronome plays, then no sound is produced (completely silent).
+- [x] Given I change the volume and later stop and restart the metronome, when it plays again, then it uses the last volume I set.
 
 ## Plan
-- Extender el rango inferior del slider de velocidad para admitir valores por debajo del mínimo actual, de modo que el scroll pueda avanzar a una fracción de la velocidad piso anterior.
-- Ajustar la guarda/clamp que impone un piso de velocidad para que respete el nuevo límite inferior.
-- Asegurar que el valor por defecto siga ofreciendo una velocidad de inicio razonable dentro del nuevo rango.
-- Actualizar los tests de desplazamiento y cambio de velocidad en vivo para que reflejen el nuevo rango y sigan pasando.
-- Verificar de extremo a extremo que el auto-scroll arranque, pause y cambie de velocidad correctamente con valores en la zona lenta.
+- Add a volume range input (0 to 1) in the navbar with a sensible default and an accessible label.
+- Route metronome oscillator clicks through a shared GainNode before reaching AudioContext destination.
+- Update the shared GainNode value immediately on slider input so sound level changes live (including 0 gain at minimum).
+- Read the current slider value when starting the metronome so subsequent sessions respect the configured volume.
+- Add unit and integration tests verifying the volume control element and GainNode level reflection.
 
 ## Out of scope
-- Cambiar la velocidad máxima o agregar un segundo control de velocidad.
-- Botones de velocidad preestablecida o etiquetas con nombre (e.g., "Lento", "Moderato").
-- Vincular la velocidad de scroll al BPM del metrónomo.
-- Cambiar la UX del auto-scroll más allá del rango del slider (e.g., control por gestos).
+- Persisting the volume preference across sessions (localStorage/IndexedDB).
+- Separate mute toggle button.
+- Per-beat volume differentiation (accent vs. normal beat volume).
+- Visual volume meter or animated decibel feedback.
 
 ## Suggestions (your call)
-- **Escala no lineal (logarítmica o cuadrática):** Si al extender el rango hacia abajo el slider se siente como que los primeros niveles "son todos iguales" y el salto a velocidad alta es brusco, una curva no lineal le daría más resolución a la zona lenta sin sacrificar el extremo rápido. Solo tiene sentido si al probar el rango lineal extendido la graduación se siente desbalanceada.
+- **Escala cuadrática para el slider:** La percepción auditiva del volumen es logarítmica. Si al probar una escala lineal notas que el sonido baja muy rápido en los primeros valores, podemos mapear `gain = sliderValue²` para mayor suavidad.

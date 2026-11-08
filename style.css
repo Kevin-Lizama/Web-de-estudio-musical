@@ -61,9 +61,11 @@ header {
   margin-left: 0.25rem;
 }
 
-#speed-input {
+#speed-input,
+#volume-input {
   cursor: pointer;
   accent-color: #4a90d9;
+  width: 5.5rem;
 }
 
 #bpm-input {
