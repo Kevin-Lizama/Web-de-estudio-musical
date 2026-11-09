@@ -10,23 +10,27 @@
 
 <body>
   <header>
-    <span class="app-name">Estudio Musical</span>
+    <span class="app-name" title="Estudio Musical" aria-label="Estudio Musical">🎵</span>
     <button id="library-btn" aria-haspopup="dialog">Biblioteca</button>
-    <button id="autoscroll-btn" aria-pressed="false">Auto-scroll</button>
-    <label for="speed-input" class="speed-label">Velocidad</label>
-    <input id="speed-input" type="range" min="0.2" max="10" step="0.2" value="3" aria-label="Velocidad de desplazamiento" title="Velocidad de desplazamiento" />
-    <button id="metronome-btn" aria-pressed="false">Metrónomo</button>
-    <label for="bpm-input" class="metronome-label">BPM</label>
-    <input id="bpm-input" type="number" min="40" max="240" value="120" aria-label="Tempo en BPM" title="Tempo en BPM" />
-    <label for="time-signature-select" class="metronome-label">Compás</label>
-    <select id="time-signature-select" aria-label="Compás del metrónomo" title="Compás del metrónomo">
-      <option value="2/4">2/4</option>
-      <option value="3/4">3/4</option>
-      <option value="4/4" selected>4/4</option>
-      <option value="6/8">6/8</option>
-    </select>
-    <label for="volume-input" class="metronome-label">Volumen</label>
-    <input id="volume-input" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Volumen del metrónomo" title="Volumen del metrónomo" />
+    <div class="section-autoscroll" role="group" aria-label="Auto-scroll">
+      <button id="autoscroll-btn" aria-pressed="false">Auto-scroll</button>
+      <label for="speed-input" class="speed-label" title="Velocidad">⚡</label>
+      <input id="speed-input" type="range" min="0.2" max="10" step="0.2" value="3" aria-label="Velocidad de desplazamiento" title="Velocidad de desplazamiento" />
+    </div>
+    <div class="section-metronome" role="group" aria-label="Metrónomo">
+      <button id="metronome-btn" aria-pressed="false">Metrónomo</button>
+      <label for="bpm-input" class="metronome-label">BPM</label>
+      <input id="bpm-input" type="number" min="40" max="240" value="120" aria-label="Tempo en BPM" title="Tempo en BPM" />
+      <label for="time-signature-select" class="metronome-label">Compás</label>
+      <select id="time-signature-select" aria-label="Compás del metrónomo" title="Compás del metrónomo">
+        <option value="2/4">2/4</option>
+        <option value="3/4">3/4</option>
+        <option value="4/4" selected>4/4</option>
+        <option value="6/8">6/8</option>
+      </select>
+      <label for="volume-input" class="metronome-label" title="Volumen">🔊</label>
+      <input id="volume-input" type="range" min="0" max="1" step="0.05" value="0.8" aria-label="Volumen del metrónomo" title="Volumen del metrónomo" />
+    </div>
   </header>
 
   <main id="viewer">

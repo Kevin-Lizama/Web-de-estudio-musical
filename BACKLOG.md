@@ -19,5 +19,5 @@ Expensive decisions: none
 11. [x] As a musician, I want the "open score" action inside the library panel instead of the navbar, so that the top bar stays uncluttered. Requires: #8
 12. [x] As a musician, I want slower auto-scroll speed options than the current minimum, so that I can follow pieces with very slow tempos. Requires: #4
 13. [x] As a musician, I want to adjust the metronome volume, so that I can balance it against my instrument without muting it entirely. Requires: #5
-14. [ ] As a musician, I want the auto-scroll controls and the metronome controls to be visually distinct sections, so that I can tell at a glance which settings belong to which feature. Requires: #4, #5
+14. [x] As a musician, I want the auto-scroll controls and the metronome controls to be visually distinct sections, so that I can tell at a glance which settings belong to which feature. Requires: #4, #5
 

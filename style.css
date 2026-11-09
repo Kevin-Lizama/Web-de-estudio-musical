@@ -20,8 +20,8 @@ header {
   display: flex;
   align-items: center;
   flex-wrap: wrap;
-  gap: 0.75rem 1rem;
-  padding: 0.75rem 1.25rem;
+  gap: 0.4rem 0.6rem;
+  padding: 0.35rem 0.75rem;
   background: #1a1a1a;
   border-bottom: 1px solid #444;
   position: sticky;
@@ -30,22 +30,43 @@ header {
 }
 
 .app-name {
-  font-size: 1.1rem;
-  font-weight: 600;
-  letter-spacing: 0.03em;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2rem;
+  height: 2rem;
+  font-size: 1.05rem;
+  border-radius: 50%;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.section-autoscroll,
+.section-metronome {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem 0.5rem;
+  padding: 0.2rem 0.5rem;
+  background: #222222;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  flex-shrink: 0;
 }
 
 #library-btn,
 #autoscroll-btn,
 #metronome-btn {
-  padding: 0.4rem 1rem;
+  padding: 0.3rem 0.7rem;
   background: #4a90d9;
   color: #fff;
   border: none;
   border-radius: 4px;
   cursor: pointer;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   transition: background 0.15s ease;
+  white-space: nowrap;
 }
 
 #library-btn:hover,
@@ -58,34 +79,34 @@ header {
 .metronome-label {
   font-size: 0.85rem;
   color: #bbb;
-  margin-left: 0.25rem;
+  margin-left: 0.1rem;
 }
 
 #speed-input,
 #volume-input {
   cursor: pointer;
   accent-color: #4a90d9;
-  width: 5.5rem;
+  width: 4rem;
 }
 
 #bpm-input {
-  width: 4rem;
-  padding: 0.3rem 0.5rem;
+  width: 3.4rem;
+  padding: 0.25rem 0.35rem;
   background: #2a2a2a;
   border: 1px solid #555;
   border-radius: 4px;
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   text-align: center;
 }
 
 #time-signature-select {
-  padding: 0.3rem 0.5rem;
+  padding: 0.25rem 0.35rem;
   background: #2a2a2a;
   border: 1px solid #555;
   border-radius: 4px;
   color: #fff;
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   cursor: pointer;
 }
 
@@ -290,21 +311,36 @@ header {
 /* ── Adaptabilidad para atril musical y móviles ───── */
 @media (max-width: 768px) {
   header {
-    gap: 0.5rem 0.75rem;
-    padding: 0.5rem 0.75rem;
+    gap: 0.35rem 0.5rem;
+    padding: 0.35rem 0.5rem;
   }
 
   .app-name {
-    font-size: 1rem;
-    width: 100%;
-    margin-bottom: 0.25rem;
+    width: 1.85rem;
+    height: 1.85rem;
+    font-size: 0.95rem;
+  }
+
+  .section-autoscroll,
+  .section-metronome {
+    gap: 0.25rem 0.4rem;
+    padding: 0.2rem 0.4rem;
   }
 
   #library-btn,
   #autoscroll-btn,
   #metronome-btn {
-    padding: 0.35rem 0.65rem;
-    font-size: 0.85rem;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.8rem;
+  }
+
+  #speed-input,
+  #volume-input {
+    width: 3.5rem;
+  }
+
+  #bpm-input {
+    width: 3rem;
   }
 
   .library-item-actions {
